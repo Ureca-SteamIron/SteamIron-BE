@@ -1,0 +1,34 @@
+# --- 비밀 설정 (절대 커밋 금지) ---
+application.yml
+application-*.yml
+!application-example.yml
+.env
+.env.*
+!.env.example
+
+# --- Java / Gradle ---
+build/
+.gradle/
+out/
+*.class
+*.jar
+!gradle/wrapper/gradle-wrapper.jar
+
+# --- Maven (혹시 사용 시) ---
+target/
+
+# --- IDE ---
+.idea/
+*.iml
+.vscode/
+.settings/
+.classpath
+.project
+
+# --- OS ---
+.DS_Store
+Thumbs.db
+
+# --- 로그 ---
+*.log
+logs/
