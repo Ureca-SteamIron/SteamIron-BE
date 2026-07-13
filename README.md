@@ -7,7 +7,7 @@
 - Spring Boot, Spring Security, JWT/OAuth2
 - JPA + MyBatis 혼용 (단순 CRUD는 JPA, 복잡한 조회는 MyBatis)
 - PostgreSQL
-- 외부 연동: Steam API, Discord Webhook, Gemini
+- 외부 연동: Steam API, Discord Webhook(?), Gemini
 
 ## 시작하기
 
