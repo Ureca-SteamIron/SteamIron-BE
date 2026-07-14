@@ -57,7 +57,8 @@ jobs:
                 "PR 설명: " + (env.PR_BODY // "(없음)") + "\n\n=== DIFF ===\n" + $diff
               ) }] }] }' > gemini_req.json
 
-          curl -s "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent" \
+          # gemini-flash-latest: 항상 최신 flash 모델을 가리키는 별칭 (모델 은퇴에도 안전)
+          curl -s "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent" \
             -H "Content-Type: application/json" \
             -H "x-goog-api-key: $GEMINI_API_KEY" \
             --data @gemini_req.json -o gemini.json
