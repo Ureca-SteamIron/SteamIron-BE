@@ -23,6 +23,8 @@ jobs:
     # 머지된 PR만 (그냥 닫힌 PR은 제외). 수동 실행은 항상 허용
     if: github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
     runs-on: ubuntu-latest
+    # 어떤 경우에도 잡이 10분을 넘기지 않게
+    timeout-minutes: 10
     steps:
       - name: PR diff 가져오기
         if: github.event_name == 'pull_request'
@@ -33,8 +35,8 @@ jobs:
             -H "Accept: application/vnd.github.diff" \
             "https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}" \
             -o pr.diff || true
-          # 너무 긴 diff는 잘라서 사용 (토큰 낭비 방지)
-          head -c 60000 pr.diff > pr_trunc.diff || touch pr_trunc.diff
+          # 너무 긴 diff는 잘라서 사용 (토큰 낭비·응답 지연 방지)
+          head -c 20000 pr.diff > pr_trunc.diff || touch pr_trunc.diff
 
       - name: Gemini로 변경사항 요약
         if: github.event_name == 'pull_request'
@@ -61,10 +63,11 @@ jobs:
           # 503(일시 과부하) 대비: 모델당 3회 재시도(10/20/30초 대기), 실패 시 예비 모델로 전환
           for MODEL in gemini-flash-latest gemini-flash-lite-latest; do
             for i in 1 2 3; do
-              curl -s "https://generativelanguage.googleapis.com/v1beta/models/$MODEL:generateContent" \
+              # --max-time: 한 요청이 90초를 넘으면 끊고 재시도 (무한 대기 방지)
+              curl -s --max-time 90 "https://generativelanguage.googleapis.com/v1beta/models/$MODEL:generateContent" \
                 -H "Content-Type: application/json" \
                 -H "x-goog-api-key: $GEMINI_API_KEY" \
-                --data @gemini_req.json -o gemini.json
+                --data @gemini_req.json -o gemini.json || echo '{"error":{"message":"curl timeout/실패"}}' > gemini.json
               if jq -e '.candidates[0].content.parts[0].text' gemini.json > /dev/null 2>&1; then
                 echo "요약 성공: $MODEL (시도 $i)"
                 break 2
