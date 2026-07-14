@@ -1,0 +1,145 @@
+# PR이 develop/main에 머지되면: diff를 Gemini로 요약 → 노션 데이터베이스에 문서로 기록
+# 위치: 각 레포의 .github/workflows/notion-sync.yml
+#
+# 사전 준비 (레포 Settings → Secrets and variables → Actions):
+#   NOTION_TOKEN        노션 integration 토큰 (ntn_...)
+#   NOTION_DATABASE_ID  기록할 노션 데이터베이스 ID
+#   GEMINI_API_KEY      (선택) Gemini API 키 — 없으면 AI 요약 없이 PR 본문만 기록
+#
+# 노션 데이터베이스에 필요한 속성(컬럼):
+#   제목(title) · 레포(select) · 작성자(text) · 브랜치(text) · PR링크(url) · 머지일(date)
+
+name: Notion 변경사항 문서화
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [develop, main]
+  # Actions 탭에서 수동 실행 가능 (노션 연동 테스트용)
+  workflow_dispatch:
+
+jobs:
+  notion-sync:
+    # 머지된 PR만 (그냥 닫힌 PR은 제외). 수동 실행은 항상 허용
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    # 어떤 경우에도 잡이 10분을 넘기지 않게
+    timeout-minutes: 10
+    steps:
+      - name: PR diff 가져오기
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          curl -s -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github.diff" \
+            "https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}" \
+            -o pr.diff || true
+          # 너무 긴 diff는 잘라서 사용 (토큰 낭비·응답 지연 방지)
+          head -c 20000 pr.diff > pr_trunc.diff || touch pr_trunc.diff
+
+      - name: Gemini로 변경사항 요약
+        if: github.event_name == 'pull_request'
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          if [ -z "$GEMINI_API_KEY" ] || [ ! -s pr_trunc.diff ]; then
+            echo "GEMINI_API_KEY 없음 또는 diff 없음 → AI 요약 생략 (PR 본문으로 대체)"
+            exit 0
+          fi
+
+          jq -n --rawfile diff pr_trunc.diff '
+            { contents: [{ parts: [{ text: (
+                "너는 개발팀의 문서화 담당자다. 아래 PR의 diff를 보고 팀 노션에 올릴 변경사항 문서를 한국어로 작성해라.\n" +
+                "형식:\n요약: 한두 문장\n주요 변경:\n- 파일/기능별 불릿 3~8개\n주의사항:\n- 다른 팀원이 알아야 할 것 (없으면 이 섹션 생략)\n" +
+                "마크다운 기호(#, **, ```) 없이 평문과 불릿(-)만 사용.\n\n" +
+                "PR 제목: " + env.PR_TITLE + "\n" +
+                "PR 설명: " + (env.PR_BODY // "(없음)") + "\n\n=== DIFF ===\n" + $diff
+              ) }] }] }' > gemini_req.json
+
+          # lite 우선: 최신 flash는 무료 티어에서 503(과부하)이 잦음. 요약 작업엔 lite로 충분
+          # 503 대비: 모델당 3회 재시도(10/20/30초 대기), 실패 시 예비 모델로 전환
+          for MODEL in gemini-flash-lite-latest gemini-flash-latest; do
+            for i in 1 2 3; do
+              # --max-time: 한 요청이 90초를 넘으면 끊고 재시도 (무한 대기 방지)
+              curl -s --max-time 90 "https://generativelanguage.googleapis.com/v1beta/models/$MODEL:generateContent" \
+                -H "Content-Type: application/json" \
+                -H "x-goog-api-key: $GEMINI_API_KEY" \
+                --data @gemini_req.json -o gemini.json || echo '{"error":{"message":"curl timeout/실패"}}' > gemini.json
+              if jq -e '.candidates[0].content.parts[0].text' gemini.json > /dev/null 2>&1; then
+                echo "요약 성공: $MODEL (시도 $i)"
+                break 2
+              fi
+              echo "요약 시도 실패 ($MODEL, $i/3): $(jq -c '.error // .' gemini.json | head -c 200)"
+              sleep $((i * 10))
+            done
+          done
+
+          jq -r '.candidates[0].content.parts[0].text // empty' gemini.json > summary.txt
+          if [ ! -s summary.txt ]; then
+            echo "::warning::Gemini 요약 실패 — PR 본문으로 대체"
+            cat gemini.json
+          fi
+
+      - name: 노션 데이터베이스에 기록
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
+          PR_TITLE: ${{ github.event.pull_request.title || '수동 테스트 실행' }}
+          PR_URL: ${{ github.event.pull_request.html_url || 'https://github.com/Ureca-SteamIron' }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login || github.actor }}
+          PR_BRANCH: ${{ github.event.pull_request.head.ref || 'manual-test' }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          REPO: ${{ github.event.repository.name }}
+          MERGED_AT: ${{ github.event.pull_request.merged_at }}
+        run: |
+          # 수동 실행이면 머지 시각 대신 현재 시각 사용
+          export MERGED_AT="${MERGED_AT:-$(date -u +%Y-%m-%dT%H:%M:%SZ)}"
+
+          # 페이지 본문: AI 요약 > PR 본문 > 기본 문구 순으로 선택
+          if [ -s summary.txt ]; then
+            BODY_FILE=summary.txt
+          else
+            printf '%s' "${PR_BODY:-변경사항 설명 없음}" > body.txt
+            BODY_FILE=body.txt
+          fi
+
+          # 줄 단위로 노션 블록 변환: "- "로 시작하면 불릿, 아니면 문단 (최대 90블록)
+          jq -n --rawfile body "$BODY_FILE" '{
+            parent: { database_id: env.NOTION_DATABASE_ID },
+            properties: {
+              "제목":   { title: [{ text: { content: env.PR_TITLE } }] },
+              "레포":   { select: { name: env.REPO } },
+              "작성자": { rich_text: [{ text: { content: env.PR_AUTHOR } }] },
+              "브랜치": { rich_text: [{ text: { content: env.PR_BRANCH } }] },
+              "PR링크": { url: env.PR_URL },
+              "머지일": { date: { start: env.MERGED_AT } }
+            },
+            children: (
+              $body | split("\n") | map(select(. != ""))
+              | map(
+                  if startswith("- ")
+                  then { object: "block", bulleted_list_item: { rich_text: [{ text: { content: (.[2:] | .[0:1900]) } }] } }
+                  else { object: "block", paragraph: { rich_text: [{ text: { content: .[0:1900] } }] } }
+                  end
+                )
+              | .[0:90]
+            )
+          }' > payload.json
+
+          HTTP_STATUS=$(curl -s -o response.json -w "%{http_code}" \
+            -X POST "https://api.notion.com/v1/pages" \
+            -H "Authorization: Bearer $NOTION_TOKEN" \
+            -H "Notion-Version: 2022-06-28" \
+            -H "Content-Type: application/json" \
+            --data @payload.json)
+
+          echo "== Notion API 응답: HTTP $HTTP_STATUS =="
+          cat response.json | jq '.' || cat response.json
+
+          if [ "$HTTP_STATUS" -ge 400 ]; then
+            echo "::error::노션 기록 실패 (HTTP $HTTP_STATUS) — 위 응답의 message 확인"
+            exit 1
+          fi
