@@ -1,9 +1,10 @@
-# PR이 develop/main에 머지되면 노션 데이터베이스에 자동 기록
+# PR이 develop/main에 머지되면: diff를 Gemini로 요약 → 노션 데이터베이스에 문서로 기록
 # 위치: 각 레포의 .github/workflows/notion-sync.yml
 #
 # 사전 준비 (레포 Settings → Secrets and variables → Actions):
 #   NOTION_TOKEN        노션 integration 토큰 (ntn_...)
 #   NOTION_DATABASE_ID  기록할 노션 데이터베이스 ID
+#   GEMINI_API_KEY      (선택) Gemini API 키 — 없으면 AI 요약 없이 PR 본문만 기록
 #
 # 노션 데이터베이스에 필요한 속성(컬럼):
 #   제목(title) · 레포(select) · 작성자(text) · 브랜치(text) · PR링크(url) · 머지일(date)
@@ -23,6 +24,50 @@ jobs:
     if: github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     steps:
+      - name: PR diff 가져오기
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          curl -s -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github.diff" \
+            "https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}" \
+            -o pr.diff || true
+          # 너무 긴 diff는 잘라서 사용 (토큰 낭비 방지)
+          head -c 60000 pr.diff > pr_trunc.diff || touch pr_trunc.diff
+
+      - name: Gemini로 변경사항 요약
+        if: github.event_name == 'pull_request'
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          if [ -z "$GEMINI_API_KEY" ] || [ ! -s pr_trunc.diff ]; then
+            echo "GEMINI_API_KEY 없음 또는 diff 없음 → AI 요약 생략 (PR 본문으로 대체)"
+            exit 0
+          fi
+
+          jq -n --rawfile diff pr_trunc.diff '
+            { contents: [{ parts: [{ text: (
+                "너는 개발팀의 문서화 담당자다. 아래 PR의 diff를 보고 팀 노션에 올릴 변경사항 문서를 한국어로 작성해라.\n" +
+                "형식:\n요약: 한두 문장\n주요 변경:\n- 파일/기능별 불릿 3~8개\n주의사항:\n- 다른 팀원이 알아야 할 것 (없으면 이 섹션 생략)\n" +
+                "마크다운 기호(#, **, ```) 없이 평문과 불릿(-)만 사용.\n\n" +
+                "PR 제목: " + env.PR_TITLE + "\n" +
+                "PR 설명: " + (env.PR_BODY // "(없음)") + "\n\n=== DIFF ===\n" + $diff
+              ) }] }] }' > gemini_req.json
+
+          curl -s "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent" \
+            -H "Content-Type: application/json" \
+            -H "x-goog-api-key: $GEMINI_API_KEY" \
+            --data @gemini_req.json -o gemini.json
+
+          jq -r '.candidates[0].content.parts[0].text // empty' gemini.json > summary.txt
+          if [ ! -s summary.txt ]; then
+            echo "::warning::Gemini 요약 실패 — PR 본문으로 대체"
+            cat gemini.json
+          fi
+
       - name: 노션 데이터베이스에 기록
         env:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
@@ -38,20 +83,35 @@ jobs:
           # 수동 실행이면 머지 시각 대신 현재 시각 사용
           export MERGED_AT="${MERGED_AT:-$(date -u +%Y-%m-%dT%H:%M:%SZ)}"
 
-          jq -n '{
+          # 페이지 본문: AI 요약 > PR 본문 > 기본 문구 순으로 선택
+          if [ -s summary.txt ]; then
+            BODY_FILE=summary.txt
+          else
+            printf '%s' "${PR_BODY:-변경사항 설명 없음}" > body.txt
+            BODY_FILE=body.txt
+          fi
+
+          # 줄 단위로 노션 블록 변환: "- "로 시작하면 불릿, 아니면 문단 (최대 90블록)
+          jq -n --rawfile body "$BODY_FILE" '{
             parent: { database_id: env.NOTION_DATABASE_ID },
             properties: {
-              "제목":    { title: [{ text: { content: env.PR_TITLE } }] },
-              "레포":    { select: { name: env.REPO } },
-              "작성자":  { rich_text: [{ text: { content: env.PR_AUTHOR } }] },
-              "브랜치":  { rich_text: [{ text: { content: env.PR_BRANCH } }] },
-              "PR링크":  { url: env.PR_URL },
-              "머지일":  { date: { start: env.MERGED_AT } }
+              "제목":   { title: [{ text: { content: env.PR_TITLE } }] },
+              "레포":   { select: { name: env.REPO } },
+              "작성자": { rich_text: [{ text: { content: env.PR_AUTHOR } }] },
+              "브랜치": { rich_text: [{ text: { content: env.PR_BRANCH } }] },
+              "PR링크": { url: env.PR_URL },
+              "머지일": { date: { start: env.MERGED_AT } }
             },
-            children: [
-              { object: "block",
-                paragraph: { rich_text: [{ text: { content: ((env.PR_BODY // "") | .[0:1900]) } }] } }
-            ]
+            children: (
+              $body | split("\n") | map(select(. != ""))
+              | map(
+                  if startswith("- ")
+                  then { object: "block", bulleted_list_item: { rich_text: [{ text: { content: (.[2:] | .[0:1900]) } }] } }
+                  else { object: "block", paragraph: { rich_text: [{ text: { content: .[0:1900] } }] } }
+                  end
+                )
+              | .[0:90]
+            )
           }' > payload.json
 
           HTTP_STATUS=$(curl -s -o response.json -w "%{http_code}" \
