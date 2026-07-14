@@ -6,7 +6,7 @@
 #   NOTION_DATABASE_ID  기록할 노션 데이터베이스 ID
 #
 # 노션 데이터베이스에 필요한 속성(컬럼):
-#   제목(title) · 레포(select) · 작성자(text) · 브랜치(text) · PR 링크(url) · 머지일(date)
+#   제목(title) · 레포(select) · 작성자(text) · 브랜치(text) · PR링크(url) · 머지일(date)
 
 name: Notion 변경사항 문서화
 
@@ -45,7 +45,7 @@ jobs:
               "레포":    { select: { name: env.REPO } },
               "작성자":  { rich_text: [{ text: { content: env.PR_AUTHOR } }] },
               "브랜치":  { rich_text: [{ text: { content: env.PR_BRANCH } }] },
-              "PR 링크": { url: env.PR_URL },
+              "PR링크":  { url: env.PR_URL },
               "머지일":  { date: { start: env.MERGED_AT } }
             },
             children: [
