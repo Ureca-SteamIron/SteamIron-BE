@@ -58,10 +58,21 @@ jobs:
               ) }] }] }' > gemini_req.json
 
           # gemini-flash-latest: 항상 최신 flash 모델을 가리키는 별칭 (모델 은퇴에도 안전)
-          curl -s "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent" \
-            -H "Content-Type: application/json" \
-            -H "x-goog-api-key: $GEMINI_API_KEY" \
-            --data @gemini_req.json -o gemini.json
+          # 503(일시 과부하) 대비: 모델당 3회 재시도(10/20/30초 대기), 실패 시 예비 모델로 전환
+          for MODEL in gemini-flash-latest gemini-flash-lite-latest; do
+            for i in 1 2 3; do
+              curl -s "https://generativelanguage.googleapis.com/v1beta/models/$MODEL:generateContent" \
+                -H "Content-Type: application/json" \
+                -H "x-goog-api-key: $GEMINI_API_KEY" \
+                --data @gemini_req.json -o gemini.json
+              if jq -e '.candidates[0].content.parts[0].text' gemini.json > /dev/null 2>&1; then
+                echo "요약 성공: $MODEL (시도 $i)"
+                break 2
+              fi
+              echo "요약 시도 실패 ($MODEL, $i/3): $(jq -c '.error // .' gemini.json | head -c 200)"
+              sleep $((i * 10))
+            done
+          done
 
           jq -r '.candidates[0].content.parts[0].text // empty' gemini.json > summary.txt
           if [ ! -s summary.txt ]; then
