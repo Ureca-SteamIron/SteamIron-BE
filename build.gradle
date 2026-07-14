@@ -1,22 +1,24 @@
 plugins {
     id 'java'
-    id 'org.springframework.boot' version '4.1.0'
-    id 'io.spring.dependency-management' version '1.1.7'
-    id 'org.asciidoctor.jvm.convert' version '4.0.5'
+    id 'org.springframework.boot' version '4.1.0' apply false
+    id 'io.spring.dependency-management' version '1.1.7' apply false
+//    id 'org.asciidoctor.jvm.convert' version '4.0.5' apply false
 }
 
-group = 'norimaets'
-version = '0.0.1-SNAPSHOT'
-description = 'SteamIron'
+allprojects {
+    group = 'norimaets'
+    version = '0.0.1-SNAPSHOT'
+    description = 'SteamIron'
 
-java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(21)
+    java {
+        toolchain {
+            languageVersion = JavaLanguageVersion.of(21)
+        }
     }
-}
 
-repositories {
-    mavenCentral()
+    repositories {
+        mavenCentral()
+    }
 }
 
 ext {
@@ -24,50 +26,67 @@ ext {
     set('springAiVersion', "2.0.0")
 }
 
-dependencies {
-    implementation 'org.springframework.boot:spring-boot-starter-actuator'
-    implementation 'org.springframework.boot:spring-boot-starter-batch'
-    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
-    implementation 'org.springframework.boot:spring-boot-starter-jdbc'
-    implementation 'org.springframework.boot:spring-boot-starter-security'
-    implementation 'org.springframework.boot:spring-boot-starter-security-oauth2-client'
-    implementation 'org.springframework.boot:spring-boot-starter-webmvc'
-//    implementation 'org.springframework.ai:spring-ai-starter-model-google-genai'
-    compileOnly 'org.projectlombok:lombok'
-    runtimeOnly 'org.postgresql:postgresql'
-    annotationProcessor 'org.projectlombok:lombok'
+subprojects {
+    apply plugin: 'java'
+    apply plugin: 'org.springframework.boot'
+    apply plugin: 'io.spring.dependency-management'
 
-    implementation 'org.mybatis.spring.boot:mybatis-spring-boot-starter:3.0.3'
-    implementation 'io.jsonwebtoken:jjwt-api:0.12.5'
-    runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.5'
-    runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.5'
+    dependencies {
+        // 모든 모듈에서 롬복과 테스트는 기본으로 사용하므로 여기에 한 번만 선언!
+        compileOnly 'org.projectlombok:lombok'
+        annotationProcessor 'org.projectlombok:lombok'
+        testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    }
 
-    testImplementation 'org.springframework.boot:spring-boot-starter-actuator-test'
-    testImplementation 'org.springframework.boot:spring-boot-starter-batch-test'
-    testImplementation 'org.springframework.boot:spring-boot-starter-data-jpa-test'
-    testImplementation 'org.springframework.boot:spring-boot-starter-jdbc-test'
-    testImplementation 'org.springframework.boot:spring-boot-starter-restdocs'
-    testImplementation 'org.springframework.boot:spring-boot-starter-security-oauth2-client-test'
-    testImplementation 'org.springframework.boot:spring-boot-starter-security-test'
-    testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
-    testImplementation 'org.springframework.restdocs:spring-restdocs-mockmvc'
-    testCompileOnly 'org.projectlombok:lombok'
-    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
-    testAnnotationProcessor 'org.projectlombok:lombok'
-}
-
-dependencyManagement {
-    imports {
-        mavenBom "org.springframework.ai:spring-ai-bom:${springAiVersion}"
+    tasks.named('test') {
+        useJUnitPlatform()
     }
 }
-
-tasks.named('test') {
-    outputs.dir snippetsDir
-    useJUnitPlatform()
-}
-
-tasks.named('asciidoctor') {
-    inputs.dir snippetsDir
-    dependsOn test
-}
+//
+//dependencies {
+//    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+//    implementation 'org.springframework.boot:spring-boot-starter-batch'
+//    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+//    implementation 'org.springframework.boot:spring-boot-starter-jdbc'
+//    implementation 'org.springframework.boot:spring-boot-starter-security'
+//    implementation 'org.springframework.boot:spring-boot-starter-security-oauth2-client'
+//    implementation 'org.springframework.boot:spring-boot-starter-webmvc'
+////    implementation 'org.springframework.ai:spring-ai-starter-model-google-genai'
+//    compileOnly 'org.projectlombok:lombok'
+//    runtimeOnly 'org.postgresql:postgresql'
+//    annotationProcessor 'org.projectlombok:lombok'
+//
+//    implementation 'org.mybatis.spring.boot:mybatis-spring-boot-starter:3.0.3'
+//    implementation 'io.jsonwebtoken:jjwt-api:0.12.5'
+//    runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.5'
+//    runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.5'
+//
+//    testImplementation 'org.springframework.boot:spring-boot-starter-actuator-test'
+//    testImplementation 'org.springframework.boot:spring-boot-starter-batch-test'
+//    testImplementation 'org.springframework.boot:spring-boot-starter-data-jpa-test'
+//    testImplementation 'org.springframework.boot:spring-boot-starter-jdbc-test'
+//    testImplementation 'org.springframework.boot:spring-boot-starter-restdocs'
+//    testImplementation 'org.springframework.boot:spring-boot-starter-security-oauth2-client-test'
+//    testImplementation 'org.springframework.boot:spring-boot-starter-security-test'
+//    testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
+//    testImplementation 'org.springframework.restdocs:spring-restdocs-mockmvc'
+//    testCompileOnly 'org.projectlombok:lombok'
+//    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+//    testAnnotationProcessor 'org.projectlombok:lombok'
+//}
+//
+//dependencyManagement {
+//    imports {
+//        mavenBom "org.springframework.ai:spring-ai-bom:${springAiVersion}"
+//    }
+//}
+//
+//tasks.named('test') {
+//    outputs.dir snippetsDir
+//    useJUnitPlatform()
+//}
+//
+//tasks.named('asciidoctor') {
+//    inputs.dir snippetsDir
+//    dependsOn test
+//}
