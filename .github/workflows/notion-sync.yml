@@ -59,9 +59,9 @@ jobs:
                 "PR 설명: " + (env.PR_BODY // "(없음)") + "\n\n=== DIFF ===\n" + $diff
               ) }] }] }' > gemini_req.json
 
-          # gemini-flash-latest: 항상 최신 flash 모델을 가리키는 별칭 (모델 은퇴에도 안전)
-          # 503(일시 과부하) 대비: 모델당 3회 재시도(10/20/30초 대기), 실패 시 예비 모델로 전환
-          for MODEL in gemini-flash-latest gemini-flash-lite-latest; do
+          # lite 우선: 최신 flash는 무료 티어에서 503(과부하)이 잦음. 요약 작업엔 lite로 충분
+          # 503 대비: 모델당 3회 재시도(10/20/30초 대기), 실패 시 예비 모델로 전환
+          for MODEL in gemini-flash-lite-latest gemini-flash-latest; do
             for i in 1 2 3; do
               # --max-time: 한 요청이 90초를 넘으면 끊고 재시도 (무한 대기 방지)
               curl -s --max-time 90 "https://generativelanguage.googleapis.com/v1beta/models/$MODEL:generateContent" \
