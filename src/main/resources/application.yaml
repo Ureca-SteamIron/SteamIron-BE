@@ -1,0 +1,33 @@
+spring:
+  application:
+    name: SteamIron
+  datasource:
+    url: jdbc:postgresql://100.96.97.2:5432/mydb
+    username: myuser
+    password: mypassword
+    driver-class-name: org.postgresql.Driver
+    jpa:
+      database-platform: org.hibernate.dialect.PostgreSQLDialect
+      hibernate:
+        ddl-auto: update
+
+  management:
+    endpoints:
+      web:
+        exposure:
+          include: health, info, metrics
+
+  logging:
+    file:
+      name: /app/logs/app.log
+
+  springdoc:
+    swagger-ui:
+      path: /swagger-ui.html
+      operationsSorter: method
+      tags-sorter: alpha
+      display-request-duration: true
+    api-docs:
+      path: /v3/api-docs
+    default-consumes-media-type: application/json
+    default-produces-media-type: application/json
