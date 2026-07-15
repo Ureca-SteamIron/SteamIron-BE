@@ -1,15 +1,10 @@
-# ⚠️ 이 파일은 "템플릿"입니다. (실제 값 없음, git에 커밋됨)
-# 사용법:
-#   1) 이 파일을 같은 폴더에 application.yaml 로 복사
-#   2) 아래 password 를 팀 채널에서 공유받은 실제 DB 비밀번호로 채우기
-#   3) application.yaml 은 gitignore 되어 커밋되지 않음
 spring:
   application:
     name: app-api-server
   datasource:
-    url: jdbc:postgresql://100.96.97.2:5432/mydb   # 팀 DB (Tailscale 연결 필요)
+    url: jdbc:postgresql://100.96.97.2:5432/mydb
     username: myuser
-    password: ""            # 🔑 팀 채널에서 받은 DB 비밀번호를 여기 입력
+    password: mypassword
     driver-class-name: org.postgresql.Driver
   jpa:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
@@ -42,7 +37,7 @@ server:
   error:
     include-message: always
 
-# Discord OAuth2 설정 (시크릿은 환경변수로 주입)
+# Discord OAuth2 설정 (시크릿은 환경변수로 주입, git에 올리지 않는다)
 discord:
   client-id: ${DISCORD_CLIENT_ID:}
   client-secret: ${DISCORD_CLIENT_SECRET:}
@@ -53,3 +48,4 @@ jwt:
   secret: ${JWT_SECRET:steamiron-local-dev-secret-key-change-me-in-production}
   access-token-expiration: 1800000      # 30분 (ms)
   refresh-token-expiration: 1209600000  # 14일 (ms)
+
