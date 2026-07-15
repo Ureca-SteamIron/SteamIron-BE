@@ -1,7 +1,11 @@
 # --- 비밀 설정 (절대 커밋 금지) ---
+# .yml / .yaml 둘 다 커버 (실제 파일이 .yaml라서 .yml만 있으면 안 걸림)
 application.yml
+application.yaml
 application-*.yml
+application-*.yaml
 !application-example.yml
+!application-example.yaml
 .env
 .env.*
 !.env.example
