@@ -22,27 +22,16 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http
-                // 세션을 안 쓰는 JWT 방식이라 CSRF 보호 불필요
-                .csrf(csrf -> csrf.disable())
-                .cors(cors -> {})
-                .formLogin(form -> form.disable())
-                .httpBasic(basic -> basic.disable())
-                // 서버에 세션을 만들지 않음 (매 요청 JWT로만 인증)
-                .sessionManagement(session ->
-                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth
-                        // 로그인/재발급/로그아웃은 토큰 없이 접근 가능
-                        .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers("/actuator/**").permitAll()
-                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
-                        .anyRequest().authenticated())
-                // 미인증 요청은 403 대신 401로 응답
-                .exceptionHandling(handling -> handling
-                        .authenticationEntryPoint((request, response, e) ->
-                                response.sendError(401)))
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
-
+        // TODO: 보안 규칙 설정 (http 빌더 체이닝 후 http.build() 반환)
+        //  - csrf 비활성화 (JWT 방식이라 불필요), cors 활성화
+        //  - formLogin / httpBasic 비활성화 (Discord 로그인만 씀)
+        //  - 세션 STATELESS (매 요청 JWT로만 인증, 서버가 로그인 상태 저장 안 함)
+        //  - 경로별 인가 (authorizeHttpRequests):
+        //      /api/auth/** , /actuator/** , /swagger-ui/** , /v3/api-docs/**  → permitAll
+        //      그 외 anyRequest → authenticated  (기본은 잠그고 예외만 연다)
+        //  - 미인증 시 403 대신 401 응답 (exceptionHandling → authenticationEntryPoint)
+        //  - jwtAuthenticationFilter 를 UsernamePasswordAuthenticationFilter 앞에 추가
+        //    (addFilterBefore)
         return http.build();
     }
 

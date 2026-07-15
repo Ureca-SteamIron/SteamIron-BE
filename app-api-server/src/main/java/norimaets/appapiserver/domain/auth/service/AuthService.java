@@ -34,57 +34,33 @@ public class AuthService {
 
     @Transactional
     public LoginResponse loginWithDiscord(String code) {
-        // 1. code를 Discord access_token으로 교환
-        DiscordTokenResponse discordToken = discordOAuthClient.exchangeCode(code);
-
-        // 2. Discord 유저 정보 조회 (Discord 토큰은 여기까지만 쓰고 버림)
-        DiscordUserResponse discordUser = discordOAuthClient.fetchUser(discordToken.accessToken());
-
-        // 3. discordId로 조회 → 있으면 로그인(프로필 갱신), 없으면 자동 회원가입
-        User user = userRepository.findByDiscordId(discordUser.id())
-                .map(existing -> {
-                    existing.updateProfile(discordUser.username(), discordUser.avatarUrl());
-                    return existing;
-                })
-                .orElseGet(() -> userRepository.save(User.builder()
-                        .discordId(discordUser.id())
-                        .username(discordUser.username())
-                        .avatarUrl(discordUser.avatarUrl())
-                        .email(discordUser.email())
-                        .build()));
-
-        // 4. 우리 서비스 토큰 발급
-        String accessToken = jwtProvider.createAccessToken(user.getId());
-        String refreshToken = issueRefreshToken(user.getId());
-
-        return new LoginResponse(
-                accessToken, refreshToken,
-                user.getId(), user.getUsername(), user.getAvatarUrl());
+        // TODO: Discord 로그인 (없으면 자동 회원가입) — 흐름 ⑥
+        //  1) discordOAuthClient.exchangeCode(code) → Discord access_token
+        //  2) discordOAuthClient.fetchUser(accessToken) → 유저 정보 (id, username, avatarUrl, email)
+        //  3) userRepository.findByDiscordId(id)
+        //       - 있으면: updateProfile()로 닉네임/아바타 갱신 후 그대로 사용
+        //       - 없으면: User.builder()로 새로 만들어 save() (자동 회원가입)
+        //       ※ Optional 의 .map(...).orElseGet(...) 패턴을 쓰면 한 덩어리로 표현 가능
+        //  4) 우리 서비스 토큰 발급: jwtProvider.createAccessToken(userId), issueRefreshToken(userId)
+        //  5) LoginResponse(accessToken, refreshToken, userId, username, avatarUrl) 반환
+        return null;
     }
 
     @Transactional
     public ReissueResponse reissue(String refreshTokenValue) {
-        RefreshToken saved = refreshTokenRepository.findByToken(refreshTokenValue)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED,
-                        "존재하지 않는 refresh token입니다. 다시 로그인해주세요."));
-
-        if (saved.isExpired()) {
-            refreshTokenRepository.delete(saved);
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED,
-                    "만료된 refresh token입니다. 다시 로그인해주세요.");
-        }
-
-        String newAccessToken = jwtProvider.createAccessToken(saved.getUserId());
-        // refresh token도 새 값으로 교체 (rotation)
-        String newRefreshToken = UUID.randomUUID().toString();
-        saved.rotate(newRefreshToken, expiryDate());
-
-        return new ReissueResponse(newAccessToken, newRefreshToken);
+        // TODO: 만료된 accessToken 재발급
+        //  1) refreshTokenRepository.findByToken(value) → 없으면 401 (재로그인 요구)
+        //  2) 만료됐으면(isExpired) → DB에서 삭제하고 401
+        //  3) 새 accessToken 발급 (jwtProvider.createAccessToken(userId))
+        //  4) refresh token도 새 값(UUID)으로 rotate() (토큰 로테이션, expiryDate() 사용)
+        //  5) ReissueResponse(newAccessToken, newRefreshToken) 반환
+        return null;
     }
 
     @Transactional
     public void logout(String refreshTokenValue) {
-        refreshTokenRepository.deleteByToken(refreshTokenValue);
+        // TODO: DB에서 해당 refresh token 삭제 (refreshTokenRepository.deleteByToken)
+        //  ※ 없는 토큰이어도 조용히 성공하는 게 정상 (에러 던지지 않음)
     }
 
     /**
@@ -92,13 +68,13 @@ public class AuthService {
      * 이미 있으면 새 값으로 교체하고, 없으면 새로 저장한다.
      */
     private String issueRefreshToken(Long userId) {
-        String token = UUID.randomUUID().toString();
-        refreshTokenRepository.findByUserId(userId)
-                .ifPresentOrElse(
-                        existing -> existing.rotate(token, expiryDate()),
-                        () -> refreshTokenRepository.save(
-                                new RefreshToken(token, userId, expiryDate())));
-        return token;
+        // TODO: refresh token 발급 (유저당 1개 정책)
+        //  1) 새 UUID 토큰 문자열 생성
+        //  2) refreshTokenRepository.findByUserId(userId)
+        //       - 있으면: existing.rotate(token, expiryDate())로 교체
+        //       - 없으면: new RefreshToken(token, userId, expiryDate())를 save()
+        //  3) 생성한 토큰 값 반환
+        return null;
     }
 
     private LocalDateTime expiryDate() {

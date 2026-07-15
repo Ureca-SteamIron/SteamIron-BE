@@ -25,13 +25,12 @@ public class JwtProvider {
     }
 
     public String createAccessToken(Long userId) {
-        Date now = new Date();
-        return Jwts.builder()
-                .subject(String.valueOf(userId)) // 토큰 주인이 누군지 (우리 DB의 userId)
-                .issuedAt(now)
-                .expiration(new Date(now.getTime() + accessTokenExpirationMs))
-                .signWith(key)
-                .compact();
+        // TODO: userId를 담은 JWT accessToken 만들기
+        //  - Jwts.builder() 사용
+        //  - subject = String.valueOf(userId)  (토큰 주인 = 우리 DB의 userId)
+        //  - issuedAt = 지금, expiration = 지금 + accessTokenExpirationMs
+        //  - signWith(key) 로 서명 후 compact() 로 문자열 반환
+        return null;
     }
 
     /**
@@ -39,11 +38,10 @@ public class JwtProvider {
      * 위조/만료 토큰이면 JwtException이 던져진다.
      */
     public Long parseUserId(String token) {
-        Claims claims = Jwts.parser()
-                .verifyWith(key)
-                .build()
-                .parseSignedClaims(token)
-                .getPayload();
-        return Long.parseLong(claims.getSubject());
+        // TODO: 토큰의 서명·만료를 검증하고 userId 꺼내기
+        //  - Jwts.parser().verifyWith(key).build().parseSignedClaims(token).getPayload() 로 Claims 추출
+        //  - 위조/만료면 JwtException이 던져짐 (여기서 잡지 말 것 — 호출한 필터에서 처리)
+        //  - claims.getSubject() 를 Long으로 변환해 반환
+        return null;
     }
 }

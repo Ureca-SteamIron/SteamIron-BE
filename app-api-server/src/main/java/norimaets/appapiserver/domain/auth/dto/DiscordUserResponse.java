@@ -16,9 +16,9 @@ public record DiscordUserResponse(
 
     // avatar는 이미지 해시라서 실제 URL로 조합해줘야 한다. 아바타 미설정 유저는 null.
     public String avatarUrl() {
-        if (avatar == null) {
-            return null;
-        }
-        return "https://cdn.discordapp.com/avatars/%s/%s.png".formatted(id, avatar);
+        // TODO: avatar 해시를 실제 CDN URL로 조합해서 반환
+        //  - avatar 가 null 이면 null 반환 (아바타 미설정 유저)
+        //  - 아니면 "https://cdn.discordapp.com/avatars/{id}/{avatar}.png" 형태로 조합
+        return null;
     }
 }

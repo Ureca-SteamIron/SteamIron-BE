@@ -40,11 +40,11 @@ public class RefreshToken {
 
     // 재발급 시 refresh token도 새 값으로 교체(rotation)
     public void rotate(String newToken, LocalDateTime newExpiryDate) {
-        this.token = newToken;
-        this.expiryDate = newExpiryDate;
+        // TODO: token, expiryDate 를 전달받은 새 값으로 교체
     }
 
     public boolean isExpired() {
-        return expiryDate.isBefore(LocalDateTime.now());
+        // TODO: expiryDate 가 현재 시각(LocalDateTime.now())보다 이전이면 true (만료됨)
+        return false;
     }
 }

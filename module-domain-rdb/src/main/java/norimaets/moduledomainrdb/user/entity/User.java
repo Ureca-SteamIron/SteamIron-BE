@@ -47,7 +47,6 @@ public class User {
 
     // Discord에서 닉네임/아바타를 바꿨을 수 있으니 로그인할 때마다 갱신
     public void updateProfile(String username, String avatarUrl) {
-        this.username = username;
-        this.avatarUrl = avatarUrl;
+        // TODO: 전달받은 username, avatarUrl 로 이 엔티티의 필드를 갱신
     }
 }
