@@ -1,37 +1,42 @@
-HELP.md
-.gradle
+# --- 비밀 설정 (절대 커밋 금지) ---
+application.yml
+application-*.yml
+!application-example.yml
+.env
+.env.*
+!.env.example
+
+# --- Java / Gradle ---
 build/
-!gradle/wrapper/gradle-wrapper.jar
-!**/src/main/**/build/
-!**/src/test/**/build/
-
-### STS ###
-.apt_generated
-.classpath
-.factorypath
-.project
-.settings
-.springBeans
-.sts4-cache
-bin/
-!**/src/main/**/bin/
-!**/src/test/**/bin/
-
-### IntelliJ IDEA ###
-.idea
-*.iws
-*.iml
-*.ipr
+.gradle/
 out/
-!**/src/main/**/out/
-!**/src/test/**/out/
+*.class
+*.jar
+!gradle/wrapper/gradle-wrapper.jar
+hs_err_pid*
 
-### NetBeans ###
-/nbproject/private/
-/nbbuild/
-/dist/
-/nbdist/
-/.nb-gradle/
+# --- Maven (혹시 사용 시) ---
+target/
 
-### VS Code ###
+# --- IDE ---
+.idea/
+*.iml
+*.iws
 .vscode/
+.settings/
+.classpath
+.project
+
+# --- OS ---
+.DS_Store
+Thumbs.db
+
+# --- 로그 ---
+*.log
+logs/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
