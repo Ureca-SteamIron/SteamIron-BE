@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@Table(name = "\"user\"") // PostgreSQL 예약어 충돌 방지
+@Table(name = "users")
 public class User {
 
     @Id
