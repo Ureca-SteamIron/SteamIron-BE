@@ -1,14 +1,10 @@
-// ⭐️ 1. 추가: 이 모듈이 다른 모듈에게 코드를 퍼주는 '라이브러리' 역할을 하도록 선언합니다.
 apply plugin: 'java-library'
 
 bootJar { enabled = false }
 jar { enabled = true }
 
 dependencies {
-    // ⭐️ 2. 변경: implementation -> api 로 바꿉니다.
-    // 이제 API 서버와 Batch 서버도 자동으로 JPA의 모든 기능을 쓸 수 있게 됩니다!
     api 'org.springframework.boot:spring-boot-starter-data-jpa'
 
-    // DB 드라이버는 내부 실행용이므로 그대로 둡니다.
     runtimeOnly 'org.postgresql:postgresql'
 }
