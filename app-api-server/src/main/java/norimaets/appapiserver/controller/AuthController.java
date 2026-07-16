@@ -1,11 +1,11 @@
-package norimaets.appapiserver.domain.auth.controller;
+package norimaets.appapiserver.controller;
 
 import lombok.RequiredArgsConstructor;
-import norimaets.appapiserver.domain.auth.dto.DiscordLoginRequest;
-import norimaets.appapiserver.domain.auth.dto.LoginResponse;
-import norimaets.appapiserver.domain.auth.dto.RefreshTokenRequest;
-import norimaets.appapiserver.domain.auth.dto.ReissueResponse;
-import norimaets.appapiserver.domain.auth.service.AuthService;
+import norimaets.appapiserver.dto.DiscordLoginRequest;
+import norimaets.appapiserver.dto.LoginResponse;
+import norimaets.appapiserver.dto.RefreshTokenRequest;
+import norimaets.appapiserver.dto.ReissueResponse;
+import norimaets.appapiserver.service.AuthService;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;

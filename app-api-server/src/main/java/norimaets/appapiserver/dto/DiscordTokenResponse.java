@@ -1,4 +1,4 @@
-package norimaets.appapiserver.domain.auth.dto;
+package norimaets.appapiserver.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;

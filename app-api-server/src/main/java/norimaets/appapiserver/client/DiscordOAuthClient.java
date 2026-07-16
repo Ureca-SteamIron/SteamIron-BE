@@ -1,7 +1,7 @@
-package norimaets.appapiserver.domain.auth.client;
+package norimaets.appapiserver.client;
 
-import norimaets.appapiserver.domain.auth.dto.DiscordTokenResponse;
-import norimaets.appapiserver.domain.auth.dto.DiscordUserResponse;
+import norimaets.appapiserver.dto.DiscordTokenResponse;
+import norimaets.appapiserver.dto.DiscordUserResponse;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;

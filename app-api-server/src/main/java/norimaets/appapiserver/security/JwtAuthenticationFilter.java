@@ -1,4 +1,4 @@
-package norimaets.appapiserver.global.security;
+package norimaets.appapiserver.security;
 
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
@@ -33,14 +33,18 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             HttpServletResponse response,
             FilterChain filterChain
     ) throws ServletException, IOException {
-        // TODO: Authorization 헤더에서 JWT를 꺼내 검증하기
-        //  1) request 에서 "Authorization" 헤더(HttpHeaders.AUTHORIZATION) 읽기
-        //  2) 값이 있고 "Bearer " 로 시작하면 → 접두사(BEARER_PREFIX) 떼고 토큰만 추출
-        //  3) jwtProvider.parseUserId(token) 로 검증 + userId 추출
-        //       - 성공: new UsernamePasswordAuthenticationToken(userId, null, List.of()) 만들어
-        //               SecurityContextHolder.getContext().setAuthentication(...) 로 인증 세팅
-        //       - JwtException / IllegalArgumentException(위조·만료): 인증 세팅 없이 그냥 통과
-        //  ※ 토큰이 없거나 이상해도 여기서 에러를 내지 말 것 (차단은 SecurityConfig가 담당)
+        String header = request.getHeader(HttpHeaders.AUTHORIZATION);
+        if (header != null && header.startsWith(BEARER_PREFIX)) {
+            String token = header.substring(BEARER_PREFIX.length()); // "Bearer " 잘라내기
+            try {
+                Long userId = jwtProvider.parseUserId(token);        // 검증 + userId 추출
+                UsernamePasswordAuthenticationToken authentication =
+                        new UsernamePasswordAuthenticationToken(userId, null, List.of());
+                SecurityContextHolder.getContext().setAuthentication(authentication);
+            } catch (JwtException | IllegalArgumentException e) {
+                // 위조/만료 토큰 → 인증 세팅 없이 통과 (미인증 상태로 처리됨)
+            }
+        }
 
         filterChain.doFilter(request, response); // 이 줄은 항상 실행돼야 함 (빠뜨리면 요청이 멈춤)
     }

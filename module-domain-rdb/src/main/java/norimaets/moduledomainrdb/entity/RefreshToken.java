@@ -1,4 +1,4 @@
-package norimaets.moduledomainrdb.auth.entity;
+package norimaets.moduledomainrdb.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

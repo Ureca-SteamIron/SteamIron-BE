@@ -1,4 +1,4 @@
-package norimaets.appapiserver.domain.auth.dto;
+package norimaets.appapiserver.dto;
 
 public record ReissueResponse(
         String accessToken,

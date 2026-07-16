@@ -1,7 +1,7 @@
-package norimaets.moduledomainrdb.auth.repository;
+package norimaets.moduledomainrdb.repository;
 
 import java.util.Optional;
-import norimaets.moduledomainrdb.auth.entity.RefreshToken;
+import norimaets.moduledomainrdb.entity.RefreshToken;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface RefreshTokenRepository extends JpaRepository<RefreshToken, Long> {
