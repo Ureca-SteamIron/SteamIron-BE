@@ -1,8 +1,8 @@
 package norimaets.appapiserver.service;
 
 import lombok.RequiredArgsConstructor;
-import norimaets.appapiserver.dto.GameSimpleResponse;
-import norimaets.appapiserver.dto.HomeResponseDto;
+import norimaets.appapiserver.dto.response.GameSimpleResponse;
+import norimaets.appapiserver.dto.response.HomeResponse;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -14,7 +14,7 @@ public class HomeService {
     private final GameService gameService;
     private final WishListService wishListService;
 
-    public HomeResponseDto getHomeData(Long userId) {
+    public HomeResponse getHomeData(Long userId) {
         // 1. 게임 서비스에서 Top 100 가져오기
         List<GameSimpleResponse> top100 = gameService.getTop100Games();
 
@@ -22,6 +22,6 @@ public class HomeService {
         List<GameSimpleResponse> myWishList = wishListService.getUserWishList(userId);
 
         // 3. 하나의 DTO로 묶어서 프론트엔드로 반환
-        return new HomeResponseDto(top100, myWishList);
+        return new HomeResponse(top100, myWishList);
     }
 }

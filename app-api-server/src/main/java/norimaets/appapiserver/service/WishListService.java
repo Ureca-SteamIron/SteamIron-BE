@@ -1,6 +1,6 @@
 package norimaets.appapiserver.service;
 
-import norimaets.appapiserver.dto.GameSimpleResponse;
+import norimaets.appapiserver.dto.response.GameSimpleResponse;
 
 import java.util.List;
 
