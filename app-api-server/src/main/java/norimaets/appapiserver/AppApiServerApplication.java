@@ -7,8 +7,8 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 
 @SpringBootApplication(
         scanBasePackages = {
-                "norimaets.appapiserver",    // 내 구역 스캔
-                "norimaets.moduledomainrdb"  // ⭐️ DB 모듈 구역(Service, Component 등) 스캔
+                "norimaets.appapiserver",
+                "norimaets.moduledomainrdb"
         }
 )
 @EntityScan(basePackages = "norimaets.moduledomainrdb")

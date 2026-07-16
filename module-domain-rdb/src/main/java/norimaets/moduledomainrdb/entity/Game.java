@@ -13,13 +13,12 @@ import java.util.List;
 
 @Entity
 @Getter
-@NoArgsConstructor(access = AccessLevel.PROTECTED) // 기본 생성자는 JPA용이므로 외부 접근 차단
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "game")
 public class Game {
 
     @Id
     @Column(name = "game_id")
-    // Steam의 고유 App ID를 그대로 사용한다고 가정하여 @GeneratedValue를 생략했습니다.
     private Long id;
 
     @Column(nullable = false)
@@ -44,7 +43,6 @@ public class Game {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
-    // 장르와의 연관관계 (양방향 매핑)
     @OneToMany(mappedBy = "game", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<GameGenre> gameGenres = new ArrayList<>();
 
