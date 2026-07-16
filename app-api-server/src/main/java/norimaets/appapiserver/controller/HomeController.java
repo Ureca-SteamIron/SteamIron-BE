@@ -15,8 +15,8 @@ public class HomeController {
     private final HomeService homeService;
 
     @GetMapping("/api/home")
-    public ApiResponse<HomeResponse> getHomeData(@AuthenticationPrincipal User user) {
-        HomeResponse data = homeService.getHomeData(user.getId());
+    public ApiResponse<HomeResponse> getHomeData() {
+        HomeResponse data = homeService.getHomeData();
         return ApiResponse.success(data);
     }
 }

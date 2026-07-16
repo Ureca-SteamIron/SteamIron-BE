@@ -10,7 +10,5 @@ import java.util.List;
 public class HomeResponse {
 
     private List<GameSimpleResponse> topGames;
-
-    private List<GameSimpleResponse> wishListGames;
-
+//    private List<GameSimpleResponse> wishListGames;
 }
