@@ -6,11 +6,6 @@ import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
 
-/*
- *
- * 예시용 파일입니다!!
- *
- */
 @Repository
 public interface UserRepository extends JpaRepository<User, Long> {
 
