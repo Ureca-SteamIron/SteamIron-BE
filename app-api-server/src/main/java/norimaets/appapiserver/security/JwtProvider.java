@@ -6,6 +6,7 @@ import io.jsonwebtoken.security.Keys;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import javax.crypto.SecretKey;
+import norimaets.moduledomainrdb.entity.Role;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -24,10 +25,11 @@ public class JwtProvider {
         this.accessTokenExpirationMs = accessTokenExpirationMs;
     }
 
-    public String createAccessToken(Long userId) {
+    public String createAccessToken(Long userId, Role role) {
         Date now = new Date();
         return Jwts.builder()
                 .subject(String.valueOf(userId))                              // 토큰 주인 = 우리 DB의 userId
+                .claim("role", role.name())                                   // 권한 (인가 판단용, "USER"/"ADMIN")
                 .issuedAt(now)                                                // 발급 시각
                 .expiration(new Date(now.getTime() + accessTokenExpirationMs)) // 만료 시각
                 .signWith(key)                                                // 비밀키로 서명
@@ -39,11 +41,19 @@ public class JwtProvider {
      * 위조/만료 토큰이면 JwtException이 던져진다.
      */
     public Long parseUserId(String token) {
-        Claims claims = Jwts.parser()
+        return Long.parseLong(parseClaims(token).getSubject());
+    }
+
+    // 토큰에서 권한(role)을 꺼낸다.
+    public Role parseRole(String token) {
+        return Role.valueOf(parseClaims(token).get("role", String.class));
+    }
+
+    private Claims parseClaims(String token) {
+        return Jwts.parser()
                 .verifyWith(key)            // 서명 검증 (만료 검사도 자동으로 됨)
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();
-        return Long.parseLong(claims.getSubject());
     }
 }

@@ -11,6 +11,7 @@ import norimaets.appapiserver.dto.LoginResponse;
 import norimaets.appapiserver.dto.ReissueResponse;
 import norimaets.appapiserver.security.JwtProvider;
 import norimaets.moduledomainrdb.entity.RefreshToken;
+import norimaets.moduledomainrdb.entity.Role;
 import norimaets.moduledomainrdb.repository.RefreshTokenRepository;
 import norimaets.moduledomainrdb.entity.User;
 import norimaets.moduledomainrdb.repository.UserRepository;
@@ -40,7 +41,13 @@ public class AuthService {
         // 2. Discord 유저 정보 조회 (Discord 토큰은 여기까지만 쓰고 버림)
         DiscordUserResponse discordUser = discordOAuthClient.fetchUser(discordToken.accessToken());
 
-        // 3. discordId로 조회 → 있으면 로그인(프로필 갱신), 없으면 자동 회원가입
+        // email은 필수(NOT NULL)라 방어적으로 체크 — email scope 승인 시 항상 오지만 만약을 대비
+        if (discordUser.email() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Discord 이메일 정보를 가져오지 못했습니다. 이메일 제공에 동의해주세요.");
+        }
+
+        // 3. discordId로 조회 → 있으면 로그인(프로필 갱신), 없으면 자동 회원가입(기본 권한 USER)
         User user = userRepository.findByDiscordId(discordUser.id())
                 .map(existing -> {
                     existing.updateProfile(discordUser.username(), discordUser.avatarUrl());
@@ -48,17 +55,18 @@ public class AuthService {
                 })
                 .orElseGet(() -> userRepository.save(User.builder()
                         .discordId(discordUser.id())
-                        .username(discordUser.username())
-                        .avatarUrl(discordUser.avatarUrl())
                         .email(discordUser.email())
+                        .nickname(discordUser.username())
+                        .avatarUrl(discordUser.avatarUrl())
+                        .role(Role.USER)
                         .build()));
 
-        // 4. 우리 서비스 토큰 발급
-        String accessToken = jwtProvider.createAccessToken(user.getId());
+        // 4. 우리 서비스 토큰 발급 (accessToken에 role 포함)
+        String accessToken = jwtProvider.createAccessToken(user.getId(), user.getRole());
         String refreshToken = issueRefreshToken(user.getId());
 
         return new LoginResponse(accessToken, refreshToken,
-                user.getId(), user.getUsername(), user.getAvatarUrl());
+                user.getId(), user.getNickname(), user.getAvatarUrl(), user.getRole());
     }
 
     @Transactional
@@ -73,7 +81,12 @@ public class AuthService {
                     "만료된 refresh token입니다. 다시 로그인해주세요.");   // 재로그인 요구
         }
 
-        String newAccessToken = jwtProvider.createAccessToken(saved.getUserId());
+        // accessToken에 role을 넣어야 하므로 유저를 조회 (refresh token엔 userId만 있음)
+        User user = userRepository.findById(saved.getUserId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED,
+                        "사용자를 찾을 수 없습니다. 다시 로그인해주세요."));
+
+        String newAccessToken = jwtProvider.createAccessToken(user.getId(), user.getRole());
         String newRefreshToken = UUID.randomUUID().toString();
         saved.rotate(newRefreshToken, expiryDate());                // refresh token도 교체 (rotation)
         // rotate 후 save()를 따로 안 부르는 이유: @Transactional 안 변경 감지(dirty checking)로 자동 UPDATE
