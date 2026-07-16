@@ -2,14 +2,13 @@ package norimaets.moduledomainrdb.entity;
 
 import jakarta.persistence.*;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.CreationTimestamp;
 
-/*
- *
- * 예시용 파일입니다!!
- *
- */
+import java.time.LocalDateTime;
+
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -20,14 +19,27 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true)
-    private String discordId;
+    @Column(length = 100, nullable = false)
+    private String email;
 
-    @Column(nullable = false)
-    private String username;
+    @Column(length = 255, nullable = false)
+    private String password;
 
-    public User(String discordId, String username) {
-        this.discordId = discordId;
-        this.username = username;
+    @Column(length = 50, nullable = false)
+    private String nickname;
+
+    @Column(length = 20, nullable = false)
+    private String role; // "USER", "ADMIN" 등
+
+    @CreationTimestamp
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+
+    @Builder
+    public User(String email, String password, String nickname, String role) {
+        this.email = email;
+        this.password = password;
+        this.nickname = nickname;
+        this.role = role != null ? role : "USER";
     }
 }
