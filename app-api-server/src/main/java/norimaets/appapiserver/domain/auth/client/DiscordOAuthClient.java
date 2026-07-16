@@ -39,24 +39,43 @@ public class DiscordOAuthClient {
     }
 
     public DiscordTokenResponse exchangeCode(String code) {
-        // TODO: code를 Discord access_token으로 교환하기 (흐름 ④)
-        //  1) form-urlencoded 본문 만들기 (MultiValueMap)
-        //     - grant_type=authorization_code, code, redirect_uri, client_id, client_secret
-        //     - ※ OAuth2 표준상 토큰 요청은 JSON이 아니라 form 형식이어야 함
-        //  2) restClient.post() 로 TOKEN_URL 에 POST
-        //     - contentType(APPLICATION_FORM_URLENCODED), body(form)
-        //  3) 응답을 DiscordTokenResponse 로 변환해 반환
-        //  4) RestClientResponseException(4xx) 발생 시 → 401 ResponseStatusException 으로 변환
-        //     ("Discord 인증 코드가 유효하지 않습니다. 다시 로그인해주세요.")
-        return null;
+        MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
+
+        form.add("grant_type", "authorization_code");
+        form.add("code", code);
+        form.add("redirect_uri", redirectUri);
+        form.add("client_id", clientId);
+        form.add("client_secret", clientSecret);
+
+        try {
+            return restClient.post()
+                    .uri(TOKEN_URL)
+                    .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                    .body(form)
+                    .retrieve()
+                    .body(DiscordTokenResponse.class);
+        } catch (RestClientResponseException e) {
+            throw new ResponseStatusException(
+              HttpStatus.UNAUTHORIZED,
+              "Discord 인증 코드가 유효하지 않습니다. 다시 로그인해주세요."
+            );
+        }
     }
 
     public DiscordUserResponse fetchUser(String discordAccessToken) {
-        // TODO: access_token으로 Discord 유저 정보 조회하기 (흐름 ⑤)
-        //  1) restClient.get() 으로 USER_URL 에 GET
-        //  2) 헤더에 "Authorization: Bearer " + discordAccessToken 추가
-        //  3) 응답을 DiscordUserResponse 로 변환해 반환
-        //  4) 실패(4xx) 시 → 401 ResponseStatusException 으로 변환
-        return null;
+        try {
+            return restClient.get()
+                    .uri(USER_URL)
+                    .headers(headers ->
+                            headers.setBearerAuth(discordAccessToken)
+                    )
+                    .retrieve()
+                    .body(DiscordUserResponse.class);
+        } catch (RestClientResponseException e) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNAUTHORIZED,
+                    "Discord 사용자 정보를 조회할 수 없습니다. 다시 로그인해주세요."
+            );
+        }
     }
 }

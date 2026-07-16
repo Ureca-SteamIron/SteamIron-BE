@@ -8,6 +8,7 @@ application-*.yml
 
 # --- Java / Gradle ---
 build/
+bin/
 .gradle/
 out/
 *.class
