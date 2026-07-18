@@ -40,7 +40,8 @@ jobs:
           RUNNER_TRACKING_ID: "" 
         run: |
           $dest = "C:/Users/student/Desktop/SteamIron/servers"
-          $apiPort = 8080
+          # 8080은 nginx(my-react) 컨테이너가 FE 정적 파일을 서빙하는 데 쓰고 있어 충돌 → BE는 8090 사용
+          $apiPort = 8090
           $batchPort = 8081
           
           # 1. 배포 폴더 생성 (없으면 만들기)
@@ -71,7 +72,7 @@ jobs:
           
           # 4. 백그라운드에서 Spring Boot 실행
           Write-Host "➡️ 새로운 API 서버 백그라운드 실행..."
-          Start-Process -FilePath "java" -ArgumentList "-jar", "$dest/api-server.jar" -WorkingDirectory $dest -RedirectStandardOutput "$dest/api_output.log" -RedirectStandardError "$dest/api_error.log" -WindowStyle Hidden
+          Start-Process -FilePath "java" -ArgumentList "-jar", "$dest/api-server.jar", "--server.port=$apiPort" -WorkingDirectory $dest -RedirectStandardOutput "$dest/api_output.log" -RedirectStandardError "$dest/api_error.log" -WindowStyle Hidden
           
           Write-Host "➡️ 새로운 Batch 서버 백그라운드 실행..."
           Start-Process -FilePath "java" -ArgumentList "-jar", "$dest/batch-server.jar" -WorkingDirectory $dest -RedirectStandardOutput "$dest/batch_output.log" -RedirectStandardError "$dest/batch_error.log" -WindowStyle Hidden
