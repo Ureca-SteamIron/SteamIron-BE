@@ -70,7 +70,6 @@ public class GameService {
     private Specification<Game> buildBaseFilterSpecification(GameFilterRequest req) {
         Specification<Game> spec = Specification.unrestricted();
 
-        // 장르 필터
         if (req.getGenre() != null && !"all".equalsIgnoreCase(req.getGenre())) {
             spec = spec.and((root, query, builder) -> {
                 Join<Game, GameGenre> gameGenreJoin = root.join("gameGenres");
@@ -79,14 +78,12 @@ public class GameService {
             });
         }
 
-        // 무료/유료 필터
         if ("free".equalsIgnoreCase(req.getPriceType())) {
             spec = spec.and((root, query, builder) -> builder.isTrue(root.get("isFree")));
         } else if ("paid".equalsIgnoreCase(req.getPriceType())) {
             spec = spec.and((root, query, builder) -> builder.isFalse(root.get("isFree")));
         }
 
-        // 가격 및 할인 필터
         if (req.getMinPrice() != null) {
             spec = spec.and((root, query, builder) -> builder.greaterThanOrEqualTo(root.get("finalPrice"), req.getMinPrice()));
         }
@@ -109,11 +106,11 @@ public class GameService {
                 return Sort.by(Sort.Direction.ASC, "finalPrice");
             case "price_desc":
                 return Sort.by(Sort.Direction.DESC, "finalPrice");
-            case "discount_desc": // 할인율 높은 순
+            case "discount_desc":
                 return Sort.by(Sort.Direction.DESC, "discountPercent");
-            case "name_asc": // 이름순 (A-Z, 가-힣)
+            case "name_asc":
                 return Sort.by(Sort.Direction.ASC, "name");
-            case "name_desc": // 이름 역순 (Z-A, 힣-가)
+            case "name_desc":
                 return Sort.by(Sort.Direction.DESC, "name");
             default:
                 return Sort.by(Sort.Direction.ASC, "id");
