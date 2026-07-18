@@ -2,7 +2,10 @@ package norimaets.appapiserver.service;
 
 import jakarta.persistence.criteria.Join;
 import lombok.RequiredArgsConstructor;
+import norimaets.appapiserver.common.exception.CustomException;
+import norimaets.appapiserver.common.exception.ErrorCode;
 import norimaets.appapiserver.dto.request.GameFilterRequest;
+import norimaets.appapiserver.dto.response.GameDetailResponse;
 import norimaets.appapiserver.dto.response.GameSimpleResponse;
 import norimaets.moduledomainrdb.entity.Game;
 import norimaets.moduledomainrdb.entity.GameGenre;
@@ -67,6 +70,29 @@ public class GameService {
         return games.stream().map(GameSimpleResponse::from).collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
+    public GameDetailResponse getGameDetail(Long gameId, Long userId) {
+
+        // 1. 게임 기본 정보 조회
+        Game game = gameRepository.findById(gameId)
+                .orElseThrow(() -> new CustomException(ErrorCode.GAME_NOT_FOUND));
+
+        // 2. AI 분석 정보 조회 (아직 분석 안 된 게임일 수도 있으니 Optional 처리)
+//        GameAiAnalysis aiAnalysis = gameAiAnalysisRepository.findById(gameId).orElse(null);
+
+        // 3. 현재 유저의 찜 여부 확인 (userId가 null이면 비로그인이므로 false)
+        boolean isWishlisted = false;
+//        if (userId != null) {
+//            isWishlisted = wishListRepository.existsByUserIdAndGameId(userId, gameId);
+//        }
+
+        // 4. 모든 데이터를 DTO 바구니에 담아서 반환
+        return GameDetailResponse.of(game,
+//                aiAnalysis,
+                isWishlisted);
+    }
+
+    // ---------------------private---------------------
     private Specification<Game> buildBaseFilterSpecification(GameFilterRequest req) {
         Specification<Game> spec = Specification.unrestricted();
 
