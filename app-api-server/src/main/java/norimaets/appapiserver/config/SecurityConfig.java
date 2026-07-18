@@ -48,10 +48,11 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        // TODO: 프론트 도메인이 정해지면 여기에 추가
+        // TODO: 실제 배포 도메인이 정해지면 여기에 추가
         config.setAllowedOrigins(List.of(
                 "http://localhost:5173",
-                "http://localhost:3000"
+                "http://localhost:3000",
+                "http://100.96.97.2:8080" // 공유 개발 서버에 배포된 FE (nginx)
         ));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
