@@ -12,7 +12,13 @@ import java.time.LocalDateTime;
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@Table(name = "wish_list")
+@Table(
+        name = "wish_list",
+        uniqueConstraints = @UniqueConstraint(
+                name = "uk_wish_user_game",
+                columnNames = {"user_id", "game_id"} // 같은 게임 중복 찜 방지
+        )
+)
 public class WishList {
 
     @Id
