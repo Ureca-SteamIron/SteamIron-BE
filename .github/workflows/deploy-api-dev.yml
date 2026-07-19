@@ -21,10 +21,10 @@ jobs:
       - name: 1. 저장소 체크아웃
         uses: actions/checkout@v4
 
-      - name: 2. Java 17 환경 설정
+      - name: 2. Java 21 환경 설정 (프로젝트 toolchain이 21이라 17로 실행하면 UnsupportedClassVersionError로 즉사)
         uses: actions/setup-java@v4
         with:
-          java-version: '17'
+          java-version: '21'
           distribution: 'corretto'
 
       - name: 3. 패키지 빌드 (API & Batch Server 동시 빌드)
