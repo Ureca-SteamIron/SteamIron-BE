@@ -6,5 +6,5 @@ include 'app-batch-server'
 
 // 2단계 (추후 추가)
 // include 'module-core'
-// include 'app-notification'
-// include 'module-domain-mongo'
+include 'app-notification'
+include 'module-domain-mongo'
