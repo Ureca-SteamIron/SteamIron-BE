@@ -20,3 +20,5 @@ public class AppApiServerApplication {
     }
 
 }
+
+// deploy: Java 21 적용 확인용 무해한 변경 (2026-07-19)
