@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 public interface TopRankingRepository extends JpaRepository<TopRanking, Long> {
 
@@ -14,4 +15,8 @@ public interface TopRankingRepository extends JpaRepository<TopRanking, Long> {
     List<Game> findTodayTop100Games();
 
     List<TopRanking> findAllByCollectedDateOrderByRankAsc(LocalDate date);
+
+    // 데이터가 있는 가장 최근 수집일. 오늘 수집 배치가 아직/실패로 안 돌았을 때 폴백용.
+    @Query("SELECT MAX(t.collectedDate) FROM TopRanking t")
+    Optional<LocalDate> findLatestCollectedDate();
 }

@@ -42,8 +42,12 @@ public class GameService {
     }
 
     public List<GameSimpleResponse> getFilteredTop100Games(GameFilterRequest request) {
-        // 1. 오늘자 Top 100 데이터를 '랭킹(rank) 오름차순'으로 먼저 가져옵니다.
-        List<TopRanking> todayRankings = topRankingRepository.findAllByCollectedDateOrderByRankAsc(LocalDate.now());
+        // 1. Top 100 기준 날짜 결정: 오늘 수집분이 없으면(배치 미실행/실패) 가장 최근 수집일로 폴백.
+        //    이렇게 안 하면 오늘 데이터가 없는 날 메인 화면이 통째로 빈다.
+        LocalDate targetDate = topRankingRepository.findLatestCollectedDate().orElse(null);
+        if (targetDate == null) return Collections.emptyList(); // 수집 이력이 아예 없는 경우
+
+        List<TopRanking> todayRankings = topRankingRepository.findAllByCollectedDateOrderByRankAsc(targetDate);
         if (todayRankings.isEmpty()) return Collections.emptyList();
 
         // 2. 랭킹 순서가 보장된 게임 ID 리스트를 추출합니다.
