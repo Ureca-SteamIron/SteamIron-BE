@@ -49,11 +49,14 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        // TODO: 실제 배포 도메인이 정해지면 여기에 추가
-        config.setAllowedOrigins(List.of(
+        // Tailscale IP가 팀원(디바이스)마다 달라(100.96.97.2 / 100.75.133.23 …) origin을 하나로 고정할 수 없다.
+        // → 100.x 대역 8080(FE nginx)을 패턴으로 허용. IP가 늘어도 코드 수정 불필요.
+        //   (setAllowedOrigins가 아니라 setAllowedOriginPatterns를 써야 와일드카드가 동작한다)
+        // TODO: 실제 배포 도메인이 정해지면 그 도메인으로 교체
+        config.setAllowedOriginPatterns(List.of(
                 "http://localhost:5173",
                 "http://localhost:3000",
-                "http://100.96.97.2:8080" // 공유 개발 서버에 배포된 FE (nginx)
+                "http://100.*:8080" // 공유 개발 서버(Tailscale)에 배포된 FE (nginx)
         ));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
