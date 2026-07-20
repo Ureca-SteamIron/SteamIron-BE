@@ -1,7 +1,10 @@
 # --- 비밀 설정 (절대 커밋 금지) ---
 application.yml
 application-*.yml
+application.yaml
+application-*.yaml
 !application-example.yml
+!application-example.yaml
 .env
 .env.*
 !.env.example
