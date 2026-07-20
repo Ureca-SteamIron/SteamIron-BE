@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import norimaets.appapiserver.common.response.ApiResponse;
 import norimaets.appapiserver.dto.request.GameFilterRequest;
 import norimaets.appapiserver.dto.response.HomeResponse;
+import norimaets.appapiserver.security.LoginUserId;
 import norimaets.appapiserver.service.HomeService;
 import norimaets.moduledomainrdb.entity.User;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,9 +21,10 @@ public class HomeController {
 
     @GetMapping
     public ApiResponse<HomeResponse> getHomeData(
-            @ModelAttribute GameFilterRequest filterRequest
+            @ModelAttribute GameFilterRequest filterRequest,
+            @LoginUserId(required = false) Long userId
     ) {
-        HomeResponse data = homeService.getHomeData(filterRequest);
+        HomeResponse data = homeService.getHomeData(filterRequest, userId);
         return ApiResponse.success(data);
     }
 }
