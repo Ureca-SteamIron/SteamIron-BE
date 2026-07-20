@@ -20,7 +20,15 @@ public enum ErrorCode {
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "U001", "해당 유저를 찾을 수 없습니다."),
 
     // Game (게임)
-    GAME_NOT_FOUND(HttpStatus.NOT_FOUND, "G001", "해당 게임을 찾을 수 없습니다.");
+    GAME_NOT_FOUND(HttpStatus.NOT_FOUND, "G001", "해당 게임을 찾을 수 없습니다."),
+
+    // WishList (찜 목록)
+    WISHLIST_ALREADY_EXISTS(HttpStatus.CONFLICT, "W001", "이미 찜 목록에 추가된 게임입니다."),
+    WISHLIST_NOT_FOUND(HttpStatus.NOT_FOUND, "W002", "찜 목록에서 해당 게임을 찾을 수 없습니다."),
+
+
+
+    ;
 
     private final HttpStatus status; // HTTP 상태 코드 (200, 400, 404 등)
     private final String code;       // 프론트가 식별할 커스텀 에러 코드
