@@ -34,9 +34,10 @@ public class AuthService {
     private long refreshTokenExpirationMs;
 
     @Transactional
-    public LoginResponse loginWithDiscord(String code) {
+    public LoginResponse loginWithDiscord(String code, String redirectUri) {
         // 1. code를 Discord access_token으로 교환
-        DiscordTokenResponse discordToken = discordOAuthClient.exchangeCode(code);
+        //    (redirectUri: 프론트가 authorize에 쓴 값과 동일해야 Discord가 code를 받아줌)
+        DiscordTokenResponse discordToken = discordOAuthClient.exchangeCode(code, redirectUri);
 
         // 2. Discord 유저 정보 조회 (Discord 토큰은 여기까지만 쓰고 버림)
         DiscordUserResponse discordUser = discordOAuthClient.fetchUser(discordToken.accessToken());

@@ -38,12 +38,17 @@ public class DiscordOAuthClient {
         this.redirectUri = redirectUri;
     }
 
-    public DiscordTokenResponse exchangeCode(String code) {
+    public DiscordTokenResponse exchangeCode(String code, String requestRedirectUri) {
         MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
+
+        // 프론트가 authorize에 쓴 redirect_uri를 그대로 써야 Discord가 code를 받아준다.
+        // (접속 IP마다 주소가 달라 고정 불가) 값이 없으면 설정의 기본값으로 폴백.
+        String effectiveRedirectUri =
+                (requestRedirectUri == null || requestRedirectUri.isBlank()) ? redirectUri : requestRedirectUri;
 
         form.add("grant_type", "authorization_code");
         form.add("code", code);
-        form.add("redirect_uri", redirectUri);
+        form.add("redirect_uri", effectiveRedirectUri);
         form.add("client_id", clientId);
         form.add("client_secret", clientSecret);
 
