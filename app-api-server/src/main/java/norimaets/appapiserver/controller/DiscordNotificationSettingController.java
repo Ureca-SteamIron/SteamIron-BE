@@ -4,21 +4,34 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import norimaets.appapiserver.common.response.ApiResponse;
 import norimaets.appapiserver.dto.request.DiscordNotificationSettingRequest;
+import norimaets.appapiserver.dto.response.DiscordNotificationSettingResponse;
 import norimaets.appapiserver.security.LoginUserId;
 import norimaets.appapiserver.service.DiscordNotificationSettingService;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/v1/users/me/notification-settings")
+@RequestMapping("/api/v1/users/me")
 public class DiscordNotificationSettingController {
 
     private final DiscordNotificationSettingService notificationSettingService;
 
-    @PatchMapping("/discord")
+    @GetMapping("/notification-settings/discord")
+    public ApiResponse<DiscordNotificationSettingResponse> getDiscordNotificationSetting(
+            @LoginUserId Long userId
+    ) {
+        DiscordNotificationSettingResponse response =
+                notificationSettingService.getSetting(userId);
+
+        return ApiResponse.success(response);
+    }
+
+    @PatchMapping("/notification-settings/discord")
     public ApiResponse<Void> updateDiscordNotificationSetting(
             @LoginUserId Long userId,
             @Valid @RequestBody DiscordNotificationSettingRequest request
