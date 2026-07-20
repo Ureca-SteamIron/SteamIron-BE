@@ -1,5 +1,5 @@
 package norimaets.appapiserver.config;
-
+//TEST
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import norimaets.appapiserver.security.LoginUserIdArgumentResolver;
