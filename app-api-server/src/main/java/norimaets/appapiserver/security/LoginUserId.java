@@ -1,5 +1,7 @@
 package norimaets.appapiserver.security;
 
+import io.swagger.v3.oas.annotations.Parameter;
+
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -22,6 +24,7 @@ import java.lang.annotation.Target;
  */
 @Target(ElementType.PARAMETER)
 @Retention(RetentionPolicy.RUNTIME)
+@Parameter(hidden = true)
 public @interface LoginUserId {
 
     /** false면 비로그인 요청도 허용하고 null을 주입한다. 기본값은 로그인 필수(true). */
