@@ -74,4 +74,14 @@ public class Game {
         if (discountPercent != null) this.discountPercent = discountPercent;
         if (isFree != null) this.isFree = isFree;
     }
+
+    public void forceUpdate(String name, String headerImage, Integer originalPrice,
+                            Integer finalPrice, Integer discountPercent, boolean isFree) {
+        this.name = name;
+        this.headerImage = headerImage;
+        this.originalPrice = originalPrice;
+        this.finalPrice = finalPrice;
+        this.discountPercent = discountPercent;
+        this.isFree = isFree;
+    }
 }
