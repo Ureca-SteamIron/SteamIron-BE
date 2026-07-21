@@ -1,22 +1,39 @@
 package norimaets.appbatchserver.scheduler;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.batch.core.job.Job;
+import org.springframework.batch.core.job.parameters.JobParameters;
+import org.springframework.batch.core.job.parameters.JobParametersBuilder;
+import org.springframework.batch.core.launch.JobOperator;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-/*
- *
- * 예시용 파일입니다!!
- *
- */
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class SteamGameBatchScheduler {
 
-    // 테스트를 위해 10분마다 실행되도록 임시 설정
-    @Scheduled(fixedDelay = 600000)
-    public void runPriceUpdateBatch() {
-        log.info("⏰ 스팀 게임 가격 업데이트 스케줄러 실행 중...");
-        // TODO: 향후 여기에 JobLauncher를 이용한 Batch Job 실행 로직 추가
+    private final JobOperator jobOperator;
+    private final Job steamTop100Job;
+
+    @Scheduled(cron = "0 0 3 * * *", zone = "Asia/Seoul")
+    public void runSteamTop100Job() {
+        LocalDate today = LocalDate.now();
+
+        JobParameters jobParameters = new JobParametersBuilder()
+                .addLocalDate("collectedDate", today)
+                .addLocalDateTime("runAt", LocalDateTime.now())
+                .toJobParameters();
+
+        try {
+            jobOperator.start(steamTop100Job, jobParameters);
+            log.info("SteamTop100Job 실행 완료: {}", today);
+        } catch (Exception e) {
+            log.error("SteamTop100Job 실행 실패: {}", today, e);
+        }
     }
 }
