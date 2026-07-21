@@ -84,6 +84,10 @@ public class User {
         this.password = encodedPassword;
     }
 
+    public boolean hasCredentials() {
+        return loginId != null && password != null;
+    }
+
     public void updateDiscordNotificationEnabled(boolean enabled) {
         this.discordNotificationEnabled = enabled;
     }

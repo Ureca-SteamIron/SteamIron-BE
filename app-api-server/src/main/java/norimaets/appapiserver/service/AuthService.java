@@ -1,15 +1,20 @@
 package norimaets.appapiserver.service;
 
+import io.jsonwebtoken.JwtException;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import norimaets.appapiserver.client.DiscordOAuthClient;
+import norimaets.appapiserver.common.exception.CustomException;
+import norimaets.appapiserver.common.exception.ErrorCode;
+import norimaets.appapiserver.dto.DiscordLoginResponse;
 import norimaets.appapiserver.dto.DiscordTokenResponse;
 import norimaets.appapiserver.dto.DiscordUserResponse;
 import norimaets.appapiserver.dto.LoginResponse;
 import norimaets.appapiserver.dto.ReissueResponse;
 import norimaets.appapiserver.security.JwtProvider;
+import norimaets.appapiserver.security.AccountSetupTokenProvider;
 import norimaets.moduledomainrdb.entity.RefreshToken;
 import norimaets.moduledomainrdb.entity.Role;
 import norimaets.moduledomainrdb.repository.RefreshTokenRepository;
@@ -17,6 +22,7 @@ import norimaets.moduledomainrdb.entity.User;
 import norimaets.moduledomainrdb.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -29,12 +35,14 @@ public class AuthService {
     private final UserRepository userRepository;
     private final RefreshTokenRepository refreshTokenRepository;
     private final JwtProvider jwtProvider;
+    private final AccountSetupTokenProvider accountSetupTokenProvider;
+    private final PasswordEncoder passwordEncoder;
 
     @Value("${jwt.refresh-token-expiration}")
     private long refreshTokenExpirationMs;
 
     @Transactional
-    public LoginResponse loginWithDiscord(String code, String redirectUri) {
+    public DiscordLoginResponse loginWithDiscord(String code, String redirectUri) {
         // 1. code를 Discord access_token으로 교환
         //    (redirectUri: 프론트가 authorize에 쓴 값과 동일해야 Discord가 code를 받아줌)
         DiscordTokenResponse discordToken = discordOAuthClient.exchangeCode(code, redirectUri);
@@ -62,7 +70,55 @@ public class AuthService {
                         .role(Role.USER)
                         .build()));
 
-        // 4. 우리 서비스 토큰 발급 (accessToken에 role 포함)
+        if (!user.hasCredentials()) {
+            return DiscordLoginResponse.accountSetupRequired(
+                    accountSetupTokenProvider.createToken(user.getId())
+            );
+        }
+
+        return DiscordLoginResponse.loggedIn(issueLoginResponse(user));
+    }
+
+    @Transactional
+    public LoginResponse login(String loginId, String password) {
+        User user = userRepository.findByLoginId(loginId)
+                .orElseThrow(() -> new CustomException(ErrorCode.INVALID_CREDENTIALS));
+
+        if (!user.hasCredentials() || !passwordEncoder.matches(password, user.getPassword())) {
+            throw new CustomException(ErrorCode.INVALID_CREDENTIALS);
+        }
+
+        return issueLoginResponse(user);
+    }
+
+    @Transactional
+    public LoginResponse setupDiscordAccount(
+            String accountSetupToken,
+            String loginId,
+            String password
+    ) {
+        Long userId;
+        try {
+            userId = accountSetupTokenProvider.parseUserId(accountSetupToken);
+        } catch (JwtException | IllegalArgumentException e) {
+            throw new CustomException(ErrorCode.INVALID_ACCOUNT_SETUP_TOKEN);
+        }
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.INVALID_ACCOUNT_SETUP_TOKEN));
+
+        if (user.hasCredentials()) {
+            throw new CustomException(ErrorCode.ACCOUNT_SETUP_ALREADY_COMPLETED);
+        }
+        if (userRepository.existsByLoginId(loginId)) {
+            throw new CustomException(ErrorCode.LOGIN_ID_ALREADY_EXISTS);
+        }
+
+        user.setCredentials(loginId, passwordEncoder.encode(password));
+        return issueLoginResponse(user);
+    }
+
+    private LoginResponse issueLoginResponse(User user) {
         String accessToken = jwtProvider.createAccessToken(user.getId(), user.getRole());
         String refreshToken = issueRefreshToken(user.getId());
 
