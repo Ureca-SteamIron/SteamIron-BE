@@ -21,4 +21,8 @@ public interface TopRankingRepository extends JpaRepository<TopRanking, Long> {
     Optional<LocalDate> findLatestCollectedDate();
 
     void deleteByCollectedDate(LocalDate collectedDate);
+
+    void deleteByCollectedDateNot(LocalDate collectedDate);
+
+    Optional<TopRanking> findByGame_Id(Long gameId);
 }

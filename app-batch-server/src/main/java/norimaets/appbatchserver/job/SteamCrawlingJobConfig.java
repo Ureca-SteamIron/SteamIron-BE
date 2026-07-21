@@ -2,8 +2,8 @@ package norimaets.appbatchserver.job;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import norimaets.appbatchserver.client.SteamSpyClient;
-import norimaets.appbatchserver.dto.SteamSpyGameDto;
+import norimaets.appbatchserver.client.AppDetailsClient;
+import norimaets.appbatchserver.client.SteamChartsClient;
 import norimaets.moduledomainrdb.entity.Game;
 import norimaets.moduledomainrdb.entity.TopRanking;
 import norimaets.moduledomainrdb.repository.GameRepository;
@@ -23,7 +23,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 @Slf4j
 @Configuration
@@ -32,7 +31,8 @@ public class SteamCrawlingJobConfig {
 
     private final JobRepository jobRepository;
     private final PlatformTransactionManager transactionManager;
-    private final SteamSpyClient steamSpyClient;
+    private final SteamChartsClient steamChartsClient;
+    private final AppDetailsClient appDetailsClient;
     private final GameRepository gameRepository;
     private final TopRankingRepository topRankingRepository;
 
@@ -60,61 +60,104 @@ public class SteamCrawlingJobConfig {
 
     @Transactional
     public void executeCrawling() {
-        Map<String, SteamSpyGameDto> response = steamSpyClient.fetchTop100();
+        List<SteamChartsClient.ChartRankDto> ranks = steamChartsClient.fetchTop100();
 
-        if (response == null || response.isEmpty()) {
-            log.warn("SteamSpy 응답이 비어있어 배치를 종료합니다.");
+        if (ranks.isEmpty()) {
+            log.warn("Steam Charts 응답이 비어있어 배치를 종료합니다.");
             return;
         }
 
         LocalDate today = LocalDate.now();
-        List<TopRanking> rankings = new ArrayList<>();
-        int rank = 1;
+        List<Long> updatedGameIds = new ArrayList<>();
+        int skipped = 0;
 
-        for (SteamSpyGameDto dto : response.values()) {
-            if (dto.getAppid() == null) continue;
+        for (SteamChartsClient.ChartRankDto dto : ranks) {
+            if (dto.getAppid() == null || dto.getRank() == null) continue;
 
-            Game game = upsertGame(dto);
+            Game game = resolveGame(dto.getAppid());
 
-            rankings.add(
-                    TopRanking.builder()
-                            .game(game)
-                            .rank(rank++)
-                            .collectedDate(today)
-                            .build()
-            );
+            if (game == null) {
+                skipped++;
+                log.warn("게임 정보 조회 실패로 랭킹에서 제외: appid={}, rank={}", dto.getAppid(), dto.getRank());
+                continue;
+            }
 
-            if (rank > 100) break;
+            upsertRanking(game, dto.getRank(), today);
+            updatedGameIds.add(game.getId());
         }
 
-        topRankingRepository.deleteByCollectedDate(today);
-        topRankingRepository.saveAll(rankings);
-
-        log.info("Steam Top100 갱신 완료: {}건, 날짜={}", rankings.size(), today);
+        log.info("Top100 갱신 완료: {}건 (제외 {}건), 날짜={}", updatedGameIds.size(), skipped, today);
     }
 
-    private Game upsertGame(SteamSpyGameDto dto) {
-        boolean isFree = dto.getPrice() != null && dto.getPrice() == 0;
+    private void upsertRanking(Game game, Integer rank, LocalDate today) {
+        topRankingRepository.findByGame_Id(game.getId())
+                .ifPresentOrElse(
+                        existing -> existing.updateRanking(rank, today),
+                        () -> topRankingRepository.save(
+                                TopRanking.builder()
+                                        .game(game)
+                                        .rank(rank)
+                                        .collectedDate(today)
+                                        .build()
+                        )
+                );
+    }
 
-        return gameRepository.findById(dto.getAppid())
-                .map(existing -> {
-                    existing.updatePriceInfo(
-                            dto.getInitialprice(),
-                            dto.getPrice(),
-                            dto.getDiscount(),
-                            isFree
-                    );
-                    return existing;
-                })
-                .orElseGet(() -> gameRepository.save(
-                        Game.builder()
-                                .id(dto.getAppid())
-                                .name(dto.getName())
-                                .originalPrice(dto.getInitialprice())
-                                .finalPrice(dto.getPrice())
-                                .discountPercent(dto.getDiscount())
-                                .isFree(isFree)
-                                .build()
-                ));
+    /**
+     * game 테이블에 있으면 필수 정보(header_image, 가격) 누락 여부 확인 후 보완.
+     * 없으면 appdetails로 신규 생성. 신규 생성도 실패하면 null 반환.
+     */
+    private Game resolveGame(Long appid) {
+        return gameRepository.findById(appid)
+                .map(this::fillMissingInfoIfNeeded)
+                .orElseGet(() -> createNewGameOrNull(appid));
+    }
+
+    // 기존 게임이라도 header_image/가격 정보가 비어있으면 appdetails로 보완.
+    // 정보가 이미 충분하면 절대 수정하지 않고 그대로 반환.
+    private Game fillMissingInfoIfNeeded(Game existing) {
+        boolean isMissingInfo = existing.getHeaderImage() == null
+                || existing.getOriginalPrice() == null
+                || existing.getFinalPrice() == null;
+
+        if (!isMissingInfo) {
+            return existing;
+        }
+
+        AppDetailsClient.AppDetail detail = appDetailsClient.fetchDetail(existing.getId());
+        if (detail == null) {
+            return existing; // 보완 실패해도 기존 데이터 그대로 유지
+        }
+
+        existing.updateIfPresent(
+                detail.getName(),
+                detail.getHeaderImage(),
+                detail.getPriceOverview() != null ? detail.getPriceOverview().getInitial() : null,
+                detail.getPriceOverview() != null ? detail.getPriceOverview().getFinalPrice() : null,
+                detail.getPriceOverview() != null ? detail.getPriceOverview().getDiscountPercent() : null,
+                detail.getIsFree()
+        );
+
+        return existing;
+    }
+
+    private Game createNewGameOrNull(Long appid) {
+        AppDetailsClient.AppDetail detail = appDetailsClient.fetchDetail(appid);
+
+        if (detail == null || detail.getName() == null) {
+            return null;
+        }
+
+        return gameRepository.save(
+                Game.builder()
+                        .id(appid)
+                        .name(detail.getName())
+                        .headerImage(detail.getHeaderImage())
+                        .originalPrice(detail.getPriceOverview() != null ? detail.getPriceOverview().getInitial() : null)
+                        .finalPrice(detail.getPriceOverview() != null ? detail.getPriceOverview().getFinalPrice() : null)
+                        .discountPercent(detail.getPriceOverview() != null ? detail.getPriceOverview().getDiscountPercent() : 0)
+                        .isFree(Boolean.TRUE.equals(detail.getIsFree()))
+                        .build()
+        );
     }
 }

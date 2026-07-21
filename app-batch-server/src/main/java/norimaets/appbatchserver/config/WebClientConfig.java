@@ -7,10 +7,17 @@ import org.springframework.web.reactive.function.client.WebClient;
 @Configuration
 public class WebClientConfig {
 
-    @Bean("steamSpyWebClient")
-    public WebClient steamSpyWebClient() {
+    @Bean("steamApiWebClient")
+    public WebClient steamApiWebClient() {
         return WebClient.builder()
-                .baseUrl("https://steamspy.com")
+                .baseUrl("https://api.steampowered.com")
+                .build();
+    }
+
+    @Bean("steamStoreWebClient")
+    public WebClient steamStoreWebClient() {
+        return WebClient.builder()
+                .baseUrl("https://store.steampowered.com")
                 .build();
     }
 }

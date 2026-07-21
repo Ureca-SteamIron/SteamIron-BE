@@ -20,7 +20,7 @@ public class SteamGameBatchScheduler {
     private final JobOperator jobOperator;
     private final Job steamTop100Job;
 
-    @Scheduled(cron = "0 0 3 * * *")
+    @Scheduled(cron = "0 0 3 * * *", zone = "Asia/Seoul")
     public void runSteamTop100Job() {
         LocalDate today = LocalDate.now();
 
