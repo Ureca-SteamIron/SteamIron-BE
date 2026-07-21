@@ -46,7 +46,13 @@ public enum ErrorCode {
             HttpStatus.BAD_REQUEST,
             "P005",
             "게임의 정가 정보가 없습니다."
-    )
+    ),
+
+
+    // 게임 상세 정보 수동갱신
+    STEAM_API_FETCH_FAILED(HttpStatus.BAD_GATEWAY, "G003", "Steam API에서 게임 정보를 가져오지 못했습니다."),
+
+
     ;
 
     private final HttpStatus status; // HTTP 상태 코드 (200, 400, 404 등)

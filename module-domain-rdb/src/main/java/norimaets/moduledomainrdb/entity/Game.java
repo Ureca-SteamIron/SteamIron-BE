@@ -84,4 +84,14 @@ public class Game {
         this.discountPercent = discountPercent;
         this.isFree = isFree;
     }
+
+    public void updateFromSteam(String name, String headerImage, boolean isFree,
+                                Integer originalPrice, Integer finalPrice, Integer discountPercent) {
+        this.name = name;
+        this.headerImage = headerImage;
+        this.isFree = isFree;
+        this.originalPrice = originalPrice;
+        this.finalPrice = finalPrice;
+        this.discountPercent = discountPercent != null ? discountPercent : 0;
+    }
 }
