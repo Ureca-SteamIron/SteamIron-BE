@@ -2,16 +2,14 @@ package norimaets.appapiserver.service;
 
 import jakarta.persistence.criteria.Join;
 import lombok.RequiredArgsConstructor;
+import norimaets.appapiserver.client.AppDetailsClient;
 import norimaets.appapiserver.common.exception.CustomException;
 import norimaets.appapiserver.common.exception.ErrorCode;
 import norimaets.appapiserver.dto.request.GameFilterRequest;
 import norimaets.appapiserver.dto.response.GameDetailResponse;
 import norimaets.appapiserver.dto.response.GameSearchResponse;
 import norimaets.appapiserver.dto.response.GameSimpleResponse;
-import norimaets.moduledomainrdb.entity.Game;
-import norimaets.moduledomainrdb.entity.GameGenre;
-import norimaets.moduledomainrdb.entity.Genre;
-import norimaets.moduledomainrdb.entity.TopRanking;
+import norimaets.moduledomainrdb.entity.*;
 import norimaets.moduledomainrdb.repository.GameRepository;
 import norimaets.moduledomainrdb.repository.TopRankingRepository;
 import org.springframework.data.domain.Page;
@@ -26,6 +24,7 @@ import java.time.LocalDate;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.stream.Collectors;
 
 @Service
@@ -34,6 +33,7 @@ public class GameService {
 
     private final GameRepository gameRepository;
     private final TopRankingRepository topRankingRepository;
+    private final AppDetailsClient appDetailsClient;
 
     @Transactional(readOnly = true)
     public List<GameSimpleResponse> getTop100Games() {
@@ -209,4 +209,38 @@ public class GameService {
                 return Sort.by(Sort.Direction.ASC, "id");
         }
     }
+
+    @Transactional
+    public GameDetailResponse refreshGame(Long appId, Long userId) {
+        Game game = gameRepository.findById(appId)
+                .orElseThrow(() -> new CustomException(ErrorCode.GAME_NOT_FOUND));
+
+        AppDetailsClient.AppDetail detail = appDetailsClient.fetchDetail(appId);
+        if (detail == null) {
+            throw new CustomException(ErrorCode.STEAM_API_FETCH_FAILED);
+        }
+
+        Integer originalPrice = null;
+        Integer finalPrice = null;
+        Integer discountPercent = 0;
+
+        if (detail.getPriceOverview() != null) {
+            // Steam은 KRW도 다른 화폐처럼 100을 곱해서 내려준다 (예: 10500원 → 1050000) → 100으로 나눠서 원 단위로 변환
+            originalPrice = detail.getPriceOverview().getInitial() / 100;
+            finalPrice = detail.getPriceOverview().getFinalPrice() / 100;
+            discountPercent = detail.getPriceOverview().getDiscountPercent();
+        }
+
+        game.updateFromSteam(
+                detail.getName(),
+                detail.getHeaderImage(),
+                Boolean.TRUE.equals(detail.getIsFree()),
+                originalPrice,
+                finalPrice,
+                discountPercent
+        );
+
+        return getGameDetail(appId, userId);
+    }
+
 }

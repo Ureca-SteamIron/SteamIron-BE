@@ -40,4 +40,9 @@ public class TopRanking {
         this.rank = rank;
         this.collectedDate = collectedDate;
     }
+
+    public void updateRanking(Integer rank, LocalDate collectedDate) {
+        this.rank = rank;
+        this.collectedDate = collectedDate;
+    }
 }

@@ -64,4 +64,34 @@ public class Game {
         this.discountPercent = discountPercent;
         this.isFree = isFree;
     }
+
+    public void updateIfPresent(String name, String headerImage, Integer originalPrice,
+                                Integer finalPrice, Integer discountPercent, Boolean isFree) {
+        if (name != null) this.name = name;
+        if (headerImage != null) this.headerImage = headerImage;
+        if (originalPrice != null) this.originalPrice = originalPrice;
+        if (finalPrice != null) this.finalPrice = finalPrice;
+        if (discountPercent != null) this.discountPercent = discountPercent;
+        if (isFree != null) this.isFree = isFree;
+    }
+
+    public void forceUpdate(String name, String headerImage, Integer originalPrice,
+                            Integer finalPrice, Integer discountPercent, boolean isFree) {
+        this.name = name;
+        this.headerImage = headerImage;
+        this.originalPrice = originalPrice;
+        this.finalPrice = finalPrice;
+        this.discountPercent = discountPercent;
+        this.isFree = isFree;
+    }
+
+    public void updateFromSteam(String name, String headerImage, boolean isFree,
+                                Integer originalPrice, Integer finalPrice, Integer discountPercent) {
+        this.name = name;
+        this.headerImage = headerImage;
+        this.isFree = isFree;
+        this.originalPrice = originalPrice;
+        this.finalPrice = finalPrice;
+        this.discountPercent = discountPercent != null ? discountPercent : 0;
+    }
 }

@@ -19,4 +19,10 @@ public interface TopRankingRepository extends JpaRepository<TopRanking, Long> {
     // 데이터가 있는 가장 최근 수집일. 오늘 수집 배치가 아직/실패로 안 돌았을 때 폴백용.
     @Query("SELECT MAX(t.collectedDate) FROM TopRanking t")
     Optional<LocalDate> findLatestCollectedDate();
+
+    void deleteByCollectedDate(LocalDate collectedDate);
+
+    void deleteByCollectedDateNot(LocalDate collectedDate);
+
+    Optional<TopRanking> findByGame_Id(Long gameId);
 }

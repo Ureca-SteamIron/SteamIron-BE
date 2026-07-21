@@ -1,7 +1,11 @@
 package norimaets.appapiserver.controller;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import norimaets.appapiserver.dto.DiscordAccountSetupRequest;
 import norimaets.appapiserver.dto.DiscordLoginRequest;
+import norimaets.appapiserver.dto.DiscordLoginResponse;
+import norimaets.appapiserver.dto.LocalLoginRequest;
 import norimaets.appapiserver.dto.LoginResponse;
 import norimaets.appapiserver.dto.RefreshTokenRequest;
 import norimaets.appapiserver.dto.ReissueResponse;
@@ -18,13 +22,27 @@ public class AuthController {
 
     private final AuthService authService;
 
+    @PostMapping("/login")
+    public LoginResponse login(@Valid @RequestBody LocalLoginRequest request) {
+        return authService.login(request.loginId(), request.password());
+    }
+
     /**
      * Discord 로그인. 프론트가 Discord 리다이렉트로 받은 code를 보내면
      * 회원가입/로그인 처리 후 우리 서비스의 토큰을 발급한다.
      */
     @PostMapping("/login/discord")
-    public LoginResponse loginWithDiscord(@RequestBody DiscordLoginRequest request) {
+    public DiscordLoginResponse loginWithDiscord(@RequestBody DiscordLoginRequest request) {
         return authService.loginWithDiscord(request.code(), request.redirectUri());
+    }
+
+    @PostMapping("/discord/account-setup")
+    public LoginResponse setupDiscordAccount(
+            @Valid @RequestBody DiscordAccountSetupRequest request
+    ) {
+        return authService.setupDiscordAccount(
+                request.accountSetupToken(), request.loginId(), request.password()
+        );
     }
 
     /**

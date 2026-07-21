@@ -6,12 +6,7 @@ import norimaets.appapiserver.dto.request.GameFilterRequest;
 import norimaets.appapiserver.dto.response.GameDetailResponse;
 import norimaets.appapiserver.dto.response.GameSearchResponse;
 import norimaets.appapiserver.service.GameService;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/games")
@@ -35,5 +30,10 @@ public class GameController {
     @GetMapping("{appId}")
     public ApiResponse<GameDetailResponse> getGame(@PathVariable Long appId, Long userId) {
         return ApiResponse.success(gameService.getGameDetail(appId, userId));
+    }
+
+    @PostMapping("/{appId}/refresh")
+    public ApiResponse<GameDetailResponse> refreshGame(@PathVariable Long appId, Long userId) {
+        return ApiResponse.success(gameService.refreshGame(appId, userId));
     }
 }
