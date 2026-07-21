@@ -21,6 +21,7 @@ public enum ErrorCode {
 
     // Game (게임)
     GAME_NOT_FOUND(HttpStatus.NOT_FOUND, "G001", "해당 게임을 찾을 수 없습니다."),
+    INVALID_SEARCH_KEYWORD(HttpStatus.BAD_REQUEST, "G002", "검색어는 2자 이상 입력해주세요."),
 
     // WishList (찜 목록)
     WISHLIST_ALREADY_EXISTS(HttpStatus.CONFLICT, "W001", "이미 찜 목록에 추가된 게임입니다."),

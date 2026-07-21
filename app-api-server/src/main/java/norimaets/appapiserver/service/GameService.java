@@ -74,6 +74,29 @@ public class GameService {
         return games.stream().map(GameSimpleResponse::from).collect(Collectors.toList());
     }
 
+    private static final int SEARCH_MIN_KEYWORD_LENGTH = 2;
+
+    /**
+     * 키워드로 전체 게임을 검색한다 (top100 범위 제한 없음).
+     * getFilteredTop100Games()와 달리 rankedGameIds로 좁히지 않고 gameRepository 전체를 대상으로 한다.
+     * 짧은 키워드(1자)는 결과가 너무 많아 느려지므로 최소 길이를 강제한다 (FE도 동일 기준으로 막지만, 다른 경로로
+     * API를 직접 호출할 수도 있으니 BE에서도 방어한다).
+     */
+    @Transactional(readOnly = true)
+    public List<GameSimpleResponse> searchGames(String keyword) {
+        String normalizedKeyword = keyword == null ? "" : keyword.trim();
+        if (normalizedKeyword.length() < SEARCH_MIN_KEYWORD_LENGTH) {
+            throw new CustomException(ErrorCode.INVALID_SEARCH_KEYWORD);
+        }
+
+        Specification<Game> spec = (root, query, builder) ->
+                builder.like(builder.lower(root.get("name")), "%" + normalizedKeyword.toLowerCase() + "%");
+
+        List<Game> games = gameRepository.findAll(spec);
+
+        return games.stream().map(GameSimpleResponse::from).collect(Collectors.toList());
+    }
+
     @Transactional(readOnly = true)
     public GameDetailResponse getGameDetail(Long gameId, Long userId) {
 
