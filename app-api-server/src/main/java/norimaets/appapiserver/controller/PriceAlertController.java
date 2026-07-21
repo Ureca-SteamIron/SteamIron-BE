@@ -4,12 +4,12 @@ import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import norimaets.appapiserver.common.response.ApiResponse;
+import norimaets.appapiserver.dto.request.PriceAlertActiveRequest;
 import norimaets.appapiserver.dto.request.PriceAlertRequest;
 import norimaets.appapiserver.dto.response.PriceAlertResponse;
 import norimaets.appapiserver.security.LoginUserId;
 import norimaets.appapiserver.service.PriceAlertService;
 import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -55,13 +55,14 @@ public class PriceAlertController {
         return ApiResponse.success();
     }
 
-    // 삭제: 알림 제거 (본인 알림만 — 서비스에서 소유권 검증)
-    @DeleteMapping("/alerts/{alertId}")
-    public ApiResponse<Void> delete(
+    // 활성화 상태 변경: 알림 켜기/끄기 (본인 알림만 — 서비스에서 소유권 검증)
+    @PatchMapping("/alerts/{alertId}/active")
+    public ApiResponse<Void> updateActive(
             @PathVariable Long alertId,
-            @LoginUserId Long userId
+            @LoginUserId Long userId,
+            @Valid @RequestBody PriceAlertActiveRequest request
     ) {
-        priceAlertService.delete(userId, alertId);
+        priceAlertService.updateActive(userId, alertId, request.active());
         return ApiResponse.success();
     }
 }

@@ -98,12 +98,12 @@ public class PriceAlertService {
     }
 
     /**
-     * 본인이 설정한 가격 알림을 삭제한다.
+     * 본인이 설정한 가격 알림을 켜거나 끈다.
      */
     @Transactional
-    public void delete(Long userId, Long alertId) {
+    public void updateActive(Long userId, Long alertId, boolean active) {
         PriceAlert alert = findOwnedAlert(alertId, userId);
-        priceAlertRepository.delete(alert);
+        alert.changeActive(active);
     }
 
     /**
