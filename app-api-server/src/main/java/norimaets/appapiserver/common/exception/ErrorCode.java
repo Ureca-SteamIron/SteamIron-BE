@@ -21,13 +21,28 @@ public enum ErrorCode {
 
     // Game (게임)
     GAME_NOT_FOUND(HttpStatus.NOT_FOUND, "G001", "해당 게임을 찾을 수 없습니다."),
+    INVALID_SEARCH_KEYWORD(HttpStatus.BAD_REQUEST, "G002", "검색어는 2자 이상 입력해주세요."),
 
     // WishList (찜 목록)
     WISHLIST_ALREADY_EXISTS(HttpStatus.CONFLICT, "W001", "이미 찜 목록에 추가된 게임입니다."),
     WISHLIST_NOT_FOUND(HttpStatus.NOT_FOUND, "W002", "찜 목록에서 해당 게임을 찾을 수 없습니다."),
 
+    // PriceAlert (가격 알림)
+    ALERT_NOT_FOUND(HttpStatus.NOT_FOUND, "P001", "해당 가격 알림을 찾을 수 없습니다."),
+    ALERT_ACCESS_DENIED(HttpStatus.FORBIDDEN, "P002", "본인의 알림만 수정/삭제할 수 있습니다."),
+    ALERT_ALREADY_EXISTS(HttpStatus.CONFLICT, "P003", "이미 이 게임에 알림을 설정했습니다."),
 
-
+    // 목표가
+    INVALID_DISCOUNT_RATE(
+            HttpStatus.BAD_REQUEST,
+            "P004",
+            "할인율은 1 이상 100 이하여야 합니다."
+    ),
+    GAME_PRICE_NOT_AVAILABLE(
+            HttpStatus.BAD_REQUEST,
+            "P005",
+            "게임의 정가 정보가 없습니다."
+    )
     ;
 
     private final HttpStatus status; // HTTP 상태 코드 (200, 400, 404 등)
