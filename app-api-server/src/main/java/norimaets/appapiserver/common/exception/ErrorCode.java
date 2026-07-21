@@ -26,7 +26,10 @@ public enum ErrorCode {
     WISHLIST_ALREADY_EXISTS(HttpStatus.CONFLICT, "W001", "이미 찜 목록에 추가된 게임입니다."),
     WISHLIST_NOT_FOUND(HttpStatus.NOT_FOUND, "W002", "찜 목록에서 해당 게임을 찾을 수 없습니다."),
 
-
+    // PriceAlert (가격 알림)
+    ALERT_NOT_FOUND(HttpStatus.NOT_FOUND, "P001", "해당 가격 알림을 찾을 수 없습니다."),
+    ALERT_ACCESS_DENIED(HttpStatus.FORBIDDEN, "P002", "본인의 알림만 수정/삭제할 수 있습니다."),
+    ALERT_ALREADY_EXISTS(HttpStatus.CONFLICT, "P003", "이미 이 게임에 알림을 설정했습니다."),
 
     ;
 

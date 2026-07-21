@@ -56,4 +56,14 @@ public class PriceAlert {
         this.lastNotifiedPrice = price;
         this.lastNotifiedAt = notifiedAt;
     }
+
+    // 목표가 변경 (단순 세팅. 할인율→목표가 계산은 서비스/컨트롤러 레이어에서 처리)
+    public void updateTargetPrice(Integer targetPrice) {
+        this.targetPrice = targetPrice;
+    }
+
+    // 알림 켜기/끄기 (게임별)
+    public void changeActive(boolean active) {
+        this.isActive = active;
+    }
 }
