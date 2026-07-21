@@ -40,7 +40,7 @@ public class PriceAlertController {
             @LoginUserId Long userId,
             @Valid @RequestBody PriceAlertRequest request
     ) {
-        priceAlertService.create(userId, gameId, request.targetPrice());
+        priceAlertService.create(userId, gameId, request);
         return ApiResponse.success();
     }
 
@@ -51,7 +51,7 @@ public class PriceAlertController {
             @LoginUserId Long userId,
             @Valid @RequestBody PriceAlertRequest request
     ) {
-        priceAlertService.updateTargetPrice(userId, alertId, request.targetPrice());
+        priceAlertService.updateTargetPrice(userId, alertId, request);
         return ApiResponse.success();
     }
 
