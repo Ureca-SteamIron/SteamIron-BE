@@ -15,9 +15,13 @@ public enum ErrorCode {
     // Auth (인증)
     UNAUTHORIZED_TOKEN(HttpStatus.UNAUTHORIZED, "A001", "유효하지 않은 토큰입니다."),
     TOKEN_EXPIRED(HttpStatus.UNAUTHORIZED, "A002", "토큰이 만료되었습니다."),
+    INVALID_CREDENTIALS(HttpStatus.UNAUTHORIZED, "A003", "아이디 또는 비밀번호가 올바르지 않습니다."),
+    INVALID_ACCOUNT_SETUP_TOKEN(HttpStatus.UNAUTHORIZED, "A004", "계정 설정 인증이 만료되었거나 유효하지 않습니다."),
 
     // User (유저)
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "U001", "해당 유저를 찾을 수 없습니다."),
+    LOGIN_ID_ALREADY_EXISTS(HttpStatus.CONFLICT, "U002", "이미 사용 중인 로그인 아이디입니다."),
+    ACCOUNT_SETUP_ALREADY_COMPLETED(HttpStatus.CONFLICT, "U003", "이미 서비스 계정 설정이 완료되었습니다."),
 
     // Game (게임)
     GAME_NOT_FOUND(HttpStatus.NOT_FOUND, "G001", "해당 게임을 찾을 수 없습니다."),
