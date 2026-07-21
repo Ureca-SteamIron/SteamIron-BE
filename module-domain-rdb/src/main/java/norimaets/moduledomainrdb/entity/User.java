@@ -55,6 +55,14 @@ public class User {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    // 사용자가 discord 알람을 동의하기전까지는 false
+    @Column(
+            name = "discord_notification_enabled",
+            nullable = false,
+            columnDefinition = "boolean default false"
+    )
+    private boolean discordNotificationEnabled = false;
+
     @Builder
     public User(String discordId, String email, String nickname, String avatarUrl, Role role) {
         this.discordId = discordId;
@@ -74,5 +82,9 @@ public class User {
     public void setCredentials(String loginId, String encodedPassword) {
         this.loginId = loginId;
         this.password = encodedPassword;
+    }
+
+    public void updateDiscordNotificationEnabled(boolean enabled) {
+        this.discordNotificationEnabled = enabled;
     }
 }

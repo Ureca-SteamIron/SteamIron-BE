@@ -24,7 +24,7 @@ public class AuthController {
      */
     @PostMapping("/login/discord")
     public LoginResponse loginWithDiscord(@RequestBody DiscordLoginRequest request) {
-        return authService.loginWithDiscord(request.code());
+        return authService.loginWithDiscord(request.code(), request.redirectUri());
     }
 
     /**

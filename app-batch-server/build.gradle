@@ -8,5 +8,9 @@ dependencies {
     runtimeOnly 'org.postgresql:postgresql'
     implementation 'org.mybatis.spring.boot:mybatis-spring-boot-starter:3.0.3'
 
-    implementation project(':module-domain-rdb')
+    // 스팀 할인 목록 응답이 JSON 속 HTML이라, 그 HTML을 파싱하기 위한 라이브러리
+    implementation 'org.jsoup:jsoup:1.18.1'
+
+    // 응답 JSON에서 total_count / results_html 을 꺼내기 위한 JSON 파서
+    implementation 'com.fasterxml.jackson.core:jackson-databind'
 }

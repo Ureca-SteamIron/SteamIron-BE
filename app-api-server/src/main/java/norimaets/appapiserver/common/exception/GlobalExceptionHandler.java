@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.server.ResponseStatusException;
 
 @Slf4j
 @RestControllerAdvice
@@ -36,6 +37,22 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(ErrorCode.INVALID_INPUT_VALUE.getStatus())
                 .body(ApiResponse.error(ErrorCode.INVALID_INPUT_VALUE, errorMessage));
+    }
+
+    /**
+     * ResponseStatusException 처리.
+     * 서비스/클라이언트에서 throw new ResponseStatusException(HttpStatus.XXX, "메시지") 로 던진
+     * 상태코드와 메시지를 그대로 응답에 실어준다.
+     * (이게 없으면 아래 handleException으로 떨어져 401/400 등이 전부 500으로 뭉개진다.
+     *  → 디스코드 로그인 실패 시 "401 코드 무효"가 "500 서버 에러"로 보이던 원인)
+     */
+    @ExceptionHandler(ResponseStatusException.class)
+    protected ResponseEntity<ApiResponse<?>> handleResponseStatusException(ResponseStatusException e) {
+        log.warn("ResponseStatusException: {} {}", e.getStatusCode(), e.getReason());
+
+        return ResponseEntity
+                .status(e.getStatusCode())
+                .body(ApiResponse.error(ErrorCode.INTERNAL_SERVER_ERROR, e.getReason()));
     }
 
     /**
