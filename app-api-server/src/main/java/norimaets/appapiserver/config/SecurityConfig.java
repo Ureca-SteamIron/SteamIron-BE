@@ -39,6 +39,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/**").permitAll()              // 로그인 전에 호출하는 API → 토큰 검사 면제
                         .requestMatchers("/api/home").permitAll()                // 메인 top100 등 로그인 여부와 무관한 공개 데이터
                         .requestMatchers(HttpMethod.GET, "/api/games/**").permitAll()          // 게임 상세도 비로그인 열람 가능, 찜 여부만 userId 있을 때 계산
+                        .requestMatchers(HttpMethod.POST, "/api/games/*/refresh").permitAll() // 수동 갱신은 비로그인도 가능 (댓글 POST는 여전히 인증 필요)
                         .requestMatchers("/actuator/**").permitAll()
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         .requestMatchers("/error").permitAll()                    // 에러 응답(메시지 포함)이 보안에 막혀 빈 body 되는 것 방지
