@@ -3,4 +3,8 @@ dependencies {
 
     implementation 'org.springframework.boot:spring-boot-starter'
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
+
+    // 배치 서버의 내부 HTTP 호출을 받는 REST 엔드포인트 + Discord API 호출용 RestClient
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
 }
