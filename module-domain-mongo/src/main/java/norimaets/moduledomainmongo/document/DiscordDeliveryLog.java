@@ -76,4 +76,22 @@ public class DiscordDeliveryLog {
         this.createdAt = createdAt != null ? createdAt : Instant.now();
         this.sentAt = sentAt;
     }
+
+    // 발송 성공 시 상태 갱신
+    public void markSent(String discordMessageId) {
+        this.status = DiscordDeliveryStatus.SENT;
+        this.discordMessageId = discordMessageId;
+        this.sentAt = Instant.now();
+        this.attemptCount = (attemptCount == null ? 0 : attemptCount) + 1;
+        this.errorCode = null;
+        this.errorMessage = null;
+    }
+
+    // 발송 실패 시 상태 갱신 (배치가 다음 주기에 재시도)
+    public void markFailed(String errorCode, String errorMessage) {
+        this.status = DiscordDeliveryStatus.FAILED;
+        this.errorCode = errorCode;
+        this.errorMessage = errorMessage;
+        this.attemptCount = (attemptCount == null ? 0 : attemptCount) + 1;
+    }
 }
