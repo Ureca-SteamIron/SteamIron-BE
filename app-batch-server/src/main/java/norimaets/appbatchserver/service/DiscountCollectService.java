@@ -1,5 +1,6 @@
 package norimaets.appbatchserver.service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -32,6 +33,7 @@ public class DiscountCollectService {
     private final SteamDiscountCollector collector;
     private final GameRepository gameRepository;
     private final PriceHistoryRepository priceHistoryRepository;
+    private final PriceAlertNotificationService priceAlertNotificationService;
 
     @Transactional
     public void collect() {
@@ -50,6 +52,8 @@ public class DiscountCollectService {
         List<Game> prevDiscounted = gameRepository.findByDiscountPercentGreaterThan(0);
 
         int started = 0, changed = 0, ended = 0;
+        // 이번 배치에서 실제로 가격이나 할인율이 변경된 게임만 보관, 모든 게임 알림 조회하면 DB 부하가 커짐
+        List<Game> priceChangedGames = new ArrayList<>();
 
         // 4. 이번 목록 순회 → 시작/변경 판정
         for (SteamDiscountItem item : current) {
@@ -67,6 +71,8 @@ public class DiscountCollectService {
             game.updatePriceInfo(original, item.finalPrice(), item.discountPercent(), false);
             saveHistory(game, item.finalPrice(), item.discountPercent());
 
+            priceChangedGames.add(game);
+
             if (wasDiscounted) changed++;
             else started++;
         }
@@ -80,6 +86,7 @@ public class DiscountCollectService {
                 Integer original = game.getOriginalPrice() != null ? game.getOriginalPrice() : game.getFinalPrice();
                 game.updatePriceInfo(original, original, 0, false); // 정가 = 현재가, 할인율 0
                 saveHistory(game, original, 0);
+                priceChangedGames.add(game);
                 ended++;
             }
         } else {
@@ -89,8 +96,9 @@ public class DiscountCollectService {
 
         log.info("할인 수집 완료 → 시작 {}, 변경 {}, 종료 {} (수신 {}건)", started, changed, ended, current.size());
 
-        // TODO: 알림 판정. 방금 가격이 바뀐 게임들에 대해 PriceAlert(목표가) 도달 여부를 확인하고
-        //       도달 시 Discord 발송 큐에 넣는다. (알림 담당자와 연동)
+        for (Game game : priceChangedGames) {
+            priceAlertNotificationService.process(game);
+        }
     }
 
     private void saveHistory(Game game, Integer price, Integer discountPercent) {

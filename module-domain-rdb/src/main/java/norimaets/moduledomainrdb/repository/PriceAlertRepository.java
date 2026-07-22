@@ -11,7 +11,16 @@ public interface PriceAlertRepository extends JpaRepository<PriceAlert, Long> {
 
     // ── 배치 판정용 ──────────────────────────────
     // 특정 게임에 걸린 "활성" 알림들. 가격이 바뀐 게임마다 이걸로 대상자를 찾는다.
-    List<PriceAlert> findByGame_IdAndIsActiveTrue(Long gameId);
+    @Query("""
+        SELECT alert
+        FROM PriceAlert alert
+        JOIN FETCH alert.user
+        WHERE alert.game.id = :gameId
+          AND alert.isActive = true
+        """)
+    List<PriceAlert> findByGame_IdAndIsActiveTrue(
+            @Param("gameId") Long gameId
+    );
 
     // ── 저장 API용 ──────────────────────────────
     // 내 알림 목록 (화면 표시용 → 게임 정보까지 fetch join으로 함께 로딩, N+1 방지)

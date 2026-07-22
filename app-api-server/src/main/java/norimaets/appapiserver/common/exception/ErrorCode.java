@@ -53,6 +53,12 @@ public enum ErrorCode {
     // 게임 상세 정보 수동갱신
     STEAM_API_FETCH_FAILED(HttpStatus.BAD_GATEWAY, "G003", "Steam API에서 게임 정보를 가져오지 못했습니다."),
 
+    // Comment (댓글)
+    COMMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "CM001", "해당 댓글을 찾을 수 없습니다."),
+    COMMENT_ACCESS_DENIED(HttpStatus.FORBIDDEN, "CM002", "본인의 댓글만 수정/삭제할 수 있습니다."),
+    COMMENT_ALREADY_DELETED(HttpStatus.BAD_REQUEST, "CM003", "이미 삭제된 댓글입니다."),
+    PARENT_COMMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "CM004", "부모 댓글을 찾을 수 없습니다."),
+    PARENT_COMMENT_DELETED(HttpStatus.BAD_REQUEST, "CM005", "삭제된 댓글에는 답글을 달 수 없습니다."),
 
     ;
 
