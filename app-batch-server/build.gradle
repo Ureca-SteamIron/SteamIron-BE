@@ -13,4 +13,6 @@ dependencies {
 
     // 응답 JSON에서 total_count / results_html 을 꺼내기 위한 JSON 파서
     implementation 'com.fasterxml.jackson.core:jackson-databind'
+
+    testRuntimeOnly 'com.h2database:h2'
 }
