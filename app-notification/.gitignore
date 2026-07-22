@@ -1,0 +1,46 @@
+# --- 비밀 설정 (절대 커밋 금지) ---
+application.yml
+application-*.yml
+application.yaml
+application-*.yaml
+!application-example.yml
+!application-example.yaml
+.env
+.env.*
+!.env.example
+
+# --- Java / Gradle ---
+build/
+bin/
+.gradle/
+out/
+*.class
+*.jar
+!gradle/wrapper/gradle-wrapper.jar
+hs_err_pid*
+
+# --- Maven (혹시 사용 시) ---
+target/
+
+# --- IDE ---
+.idea/
+*.iml
+*.iws
+.vscode/
+.settings/
+.classpath
+.project
+
+# --- OS ---
+.DS_Store
+Thumbs.db
+
+# --- 로그 ---
+*.log
+logs/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/

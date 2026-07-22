@@ -59,8 +59,17 @@ public class Comment {
         this.content = content;
     }
 
+    public void updateContent(String content) {
+        this.content = content;
+    }
+
     // 소프트 딜리트(Soft Delete) 용 메서드
     public void deleteComment() {
         this.deletedAt = LocalDateTime.now();
+        for (Comment child : children) {
+            if (child.getDeletedAt() == null) {
+                child.deleteComment();  // 재귀적으로 자식까지 soft delete
+            }
+        }
     }
 }
