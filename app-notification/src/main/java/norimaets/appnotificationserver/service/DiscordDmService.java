@@ -68,6 +68,7 @@ public class DiscordDmService {
     private DiscordDeliveryLog newPendingLog(DiscordDmRequest r) {
         return DiscordDeliveryLog.builder()
                 .eventKey(r.eventKey())
+                .notificationType(r.notificationType())
                 .userId(r.userId())
                 .discordUserId(r.discordUserId())
                 .gameId(r.gameId())
@@ -80,9 +81,21 @@ public class DiscordDmService {
     }
 
     private String buildMessage(DiscordDmRequest r) {
-        String target = r.targetPrice() == null ? "-" : String.format("%,d원", r.targetPrice());
         String current = r.currentPrice() == null ? "-" : String.format("%,d원", r.currentPrice());
         String discount = r.discountPercent() == null ? "" : " (-" + r.discountPercent() + "%)";
+
+        if ("DISCOUNT_START".equals(r.notificationType())) {
+            return """
+                    🎉 찜한 게임의 할인이 시작됐어요!
+
+                    %s
+                    현재 %s%s
+
+                    지금 확인하기 👉 https://store.steampowered.com/app/%d
+                    """.formatted(r.gameName(), current, discount, r.gameId());
+        }
+
+        String target = r.targetPrice() == null ? "-" : String.format("%,d원", r.targetPrice());
         return """
                 🎮 찜한 게임이 목표가에 도달했어요!
 
