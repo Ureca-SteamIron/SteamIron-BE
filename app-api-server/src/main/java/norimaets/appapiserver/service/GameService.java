@@ -225,10 +225,17 @@ public class GameService {
         Integer discountPercent = 0;
 
         if (detail.getPriceOverview() != null) {
-            // Steam은 KRW도 다른 화폐처럼 100을 곱해서 내려준다 (예: 10500원 → 1050000) → 100으로 나눠서 원 단위로 변환
             originalPrice = detail.getPriceOverview().getInitial() / 100;
             finalPrice = detail.getPriceOverview().getFinalPrice() / 100;
             discountPercent = detail.getPriceOverview().getDiscountPercent();
+
+            if (discountPercent != null) {
+                if (discountPercent >= 100) {
+                    finalPrice = 0;
+                } else if (discountPercent == 0) {
+                    finalPrice = originalPrice; // 할인 없음이면 정가와 동일해야 함
+                }
+            }
         }
 
         game.updateFromSteam(
