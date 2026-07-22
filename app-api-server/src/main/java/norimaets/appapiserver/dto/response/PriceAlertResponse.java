@@ -13,6 +13,9 @@ public record PriceAlertResponse(
         String gameName,
         String headerImage,
         Integer targetPrice,
+        Integer discountRate,
+        Boolean discountStartEnabled,
+        Boolean targetDiscountEnabled,
         Integer currentPrice,   // 게임의 현재 최종가 (도달 여부 판단/표시용)
         Boolean isActive
 ) {
@@ -24,6 +27,9 @@ public record PriceAlertResponse(
                 game.getName(),
                 game.getHeaderImage(),
                 alert.getTargetPrice(),
+                alert.resolveDiscountRate(),
+                alert.isDiscountStartEnabled(),
+                alert.isTargetDiscountEnabled(),
                 game.getFinalPrice(),
                 alert.getIsActive()
         );

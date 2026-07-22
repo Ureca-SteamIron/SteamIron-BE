@@ -8,6 +8,7 @@ import jakarta.validation.constraints.NotBlank;
  */
 public record DiscordDmRequest(
         @NotBlank String eventKey,
+        @NotBlank String notificationType,
         Long alertId,
         Long userId,
         @NotBlank String discordUserId,

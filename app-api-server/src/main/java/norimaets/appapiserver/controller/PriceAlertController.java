@@ -10,6 +10,7 @@ import norimaets.appapiserver.dto.response.PriceAlertResponse;
 import norimaets.appapiserver.security.LoginUserId;
 import norimaets.appapiserver.service.PriceAlertService;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -63,6 +64,16 @@ public class PriceAlertController {
             @Valid @RequestBody PriceAlertActiveRequest request
     ) {
         priceAlertService.updateActive(userId, alertId, request.active());
+        return ApiResponse.success();
+    }
+
+    // 삭제: 종 알림 OFF 시 이 게임의 할인 시작/지정 할인율 설정을 모두 제거
+    @DeleteMapping("/alerts/{alertId}")
+    public ApiResponse<Void> delete(
+            @PathVariable Long alertId,
+            @LoginUserId Long userId
+    ) {
+        priceAlertService.delete(userId, alertId);
         return ApiResponse.success();
     }
 }

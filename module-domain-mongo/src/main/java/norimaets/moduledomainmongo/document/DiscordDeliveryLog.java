@@ -19,6 +19,7 @@ public class DiscordDeliveryLog {
 
     @Indexed(name = "uk_discord_delivery_event_key", unique = true)
     private String eventKey;
+    private String notificationType;
 
     @Indexed(name = "idx_discord_delivery_user_id")
     private Long userId;
@@ -45,6 +46,7 @@ public class DiscordDeliveryLog {
     @Builder
     public DiscordDeliveryLog(
             String eventKey,
+            String notificationType,
             Long userId,
             String discordUserId,
             Long gameId,
@@ -61,6 +63,7 @@ public class DiscordDeliveryLog {
             Instant sentAt
     ) {
         this.eventKey = eventKey;
+        this.notificationType = notificationType;
         this.userId = userId;
         this.discordUserId = discordUserId;
         this.gameId = gameId;

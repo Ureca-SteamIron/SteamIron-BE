@@ -34,16 +34,7 @@ public class PriceAlertService {
                 .toList();
     }
 
-    /**
-     * 게임 가격 알림을 생성한다.
-     *
-     * RATE:
-     * 정가와 할인율을 이용하여 목표 가격을 계산한다.
-     *
-     * ANY:
-     * 정가보다 1원이라도 낮아지면 알림이 발생하도록
-     * 정가 - 1을 목표 가격으로 설정한다.
-     */
+    /** 게임의 할인 시작 알림과 지정 할인율 알림 설정을 생성한다. */
     // 알림 생성 (같은 게임에 이미 있으면 중복 거부)
     @Transactional
     public void create(
@@ -73,13 +64,16 @@ public class PriceAlertService {
                 .user(user)
                 .game(game)
                 .targetPrice(targetPrice)
+                .discountRate(request.discountRate())
+                .discountStartEnabled(request.discountStartEnabled())
+                .targetDiscountEnabled(request.targetDiscountEnabled())
                 .build();
 
         priceAlertRepository.save(priceAlert);
     }
 
     /**
-     * 본인이 설정한 가격 알림의 목표 가격을 변경한다.
+     * 본인이 설정한 두 가격 알림의 활성 여부와 지정 할인율을 변경한다.
      */
     @Transactional
     public void updateTargetPrice(
@@ -94,7 +88,12 @@ public class PriceAlertService {
                 request
         );
 
-        alert.updateTargetPrice(targetPrice);
+        alert.updateSettings(
+                targetPrice,
+                request.discountRate(),
+                request.discountStartEnabled(),
+                request.targetDiscountEnabled()
+        );
     }
 
     /**
@@ -106,8 +105,16 @@ public class PriceAlertService {
         alert.changeActive(active);
     }
 
+    /** 종 알림을 끌 때 저장된 두 알림 조건과 발송 이력을 함께 제거한다. */
+    @Transactional
+    public void delete(Long userId, Long alertId) {
+        PriceAlert alert = findOwnedAlert(alertId, userId);
+        priceAlertRepository.delete(alert);
+    }
+
     /**
-     * 알림 방식에 따라 목표 가격을 계산한다.
+     * 지정 할인율 알림이 꺼져 있어도 기존 스키마의 target_price가 NOT NULL이므로
+     * 정가를 보관한다. 배치는 targetDiscountEnabled가 true일 때만 목표가를 판정한다.
      */
     private int calculateTargetPrice(
             Game game,
@@ -115,20 +122,17 @@ public class PriceAlertService {
     ) {
         Integer originalPrice = game.getOriginalPrice();
 
+        if (!Boolean.TRUE.equals(request.targetDiscountEnabled())) {
+            return originalPrice != null ? originalPrice : 0;
+        }
+
         if (originalPrice == null || originalPrice <= 0) {
             throw new CustomException(
                     ErrorCode.GAME_PRICE_NOT_AVAILABLE
             );
         }
 
-        return switch (request.alertType()) {
-            case RATE -> calculateRateTargetPrice(
-                    originalPrice,
-                    request.discountRate()
-            );
-
-            case ANY -> originalPrice - 1;
-        };
+        return calculateRateTargetPrice(originalPrice, request.discountRate());
     }
 
     /**
