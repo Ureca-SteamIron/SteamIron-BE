@@ -22,6 +22,7 @@ public enum ErrorCode {
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "U001", "해당 유저를 찾을 수 없습니다."),
     LOGIN_ID_ALREADY_EXISTS(HttpStatus.CONFLICT, "U002", "이미 사용 중인 로그인 아이디입니다."),
     ACCOUNT_SETUP_ALREADY_COMPLETED(HttpStatus.CONFLICT, "U003", "이미 서비스 계정 설정이 완료되었습니다."),
+    CREDENTIALS_NOT_SET(HttpStatus.BAD_REQUEST, "U004", "아이디/비밀번호가 아직 설정되지 않았습니다. 먼저 설정해주세요."),
 
     // Game (게임)
     GAME_NOT_FOUND(HttpStatus.NOT_FOUND, "G001", "해당 게임을 찾을 수 없습니다."),
