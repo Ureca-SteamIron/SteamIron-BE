@@ -2,6 +2,7 @@ package norimaets.appapiserver.dto.response;
 
 import lombok.Builder;
 import lombok.Getter;
+import norimaets.appapiserver.service.GeminiService;
 import norimaets.moduledomainrdb.entity.Game;
 
 @Getter
@@ -24,7 +25,7 @@ public class GameDetailResponse {
      * Entity 조각들을 모아서 하나의 완전한 DTO로 조립하는 팩토리 메서드
      */
     public static GameDetailResponse of(Game game,
-//                                        GameAiAnalysis aiAnalysis,
+                                        String aiExplanation,
                                         boolean isWishlisted) {
         return GameDetailResponse.builder()
                 .appId(game.getId())
@@ -33,13 +34,11 @@ public class GameDetailResponse {
                 .originalPrice(game.getOriginalPrice())
                 .finalPrice(game.getFinalPrice())
                 .discountPercent(game.getDiscountPercent())
-                // .description(game.getDescription()) // 필요시 Game 엔티티에 추가
 
-                .isWishlisted(isWishlisted) // 외부에서 계산된 결과 주입
+                .isWishlisted(isWishlisted)
 
-                // AI 분석 결과가 아직 없을 경우(null)를 대비한 안전한 매핑
-//                .aiScore(aiAnalysis != null ? aiAnalysis.getScore() : null)
-//                .aiExplanation(aiAnalysis != null ? aiAnalysis.getExplanation() : "AI 분석이 진행 중입니다.")
+                // 💡 주석을 해제하고 Gemini가 생성한 요약 텍스트를 담아줍니다.
+                .aiExplanation(aiExplanation != null ? aiExplanation : "AI 요약을 불러오는 중입니다.")
                 .build();
     }
 }

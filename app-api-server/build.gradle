@@ -20,4 +20,7 @@ dependencies {
 
     implementation 'org.springframework.boot:spring-boot-starter-validation'
     implementation 'org.springframework.boot:spring-boot-starter-webflux'
+
+    // Source: https://mvnrepository.com/artifact/com.google.genai/google-genai
+    implementation 'com.google.genai:google-genai:1.22.0'
 }

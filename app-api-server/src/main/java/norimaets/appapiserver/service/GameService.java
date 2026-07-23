@@ -13,6 +13,7 @@ import norimaets.appapiserver.specification.GameSpecs;
 import norimaets.moduledomainrdb.entity.*;
 import norimaets.moduledomainrdb.repository.GameRepository;
 import norimaets.moduledomainrdb.repository.TopRankingRepository;
+import norimaets.moduledomainrdb.repository.WishListRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -35,6 +36,9 @@ public class GameService {
     private final GameRepository gameRepository;
     private final TopRankingRepository topRankingRepository;
     private final AppDetailsClient appDetailsClient;
+
+    private final WishListRepository wishListRepository;
+    private final GeminiService geminiService;
 
     @Transactional(readOnly = true)
     public List<GameSimpleResponse> getTop100Games() {
@@ -166,18 +170,20 @@ public class GameService {
                 .orElseThrow(() -> new CustomException(ErrorCode.GAME_NOT_FOUND));
 
         // 2. AI 분석 정보 조회 (아직 분석 안 된 게임일 수도 있으니 Optional 처리)
-//        GameAiAnalysis aiAnalysis = gameAiAnalysisRepository.findById(gameId).orElse(null);
+        String aiSummary = geminiService.generateGameSummary(
+                game.getName(),
+                game.getOriginalPrice(),
+                game.getDiscountPercent()
+        );
 
         // 3. 현재 유저의 찜 여부 확인 (userId가 null이면 비로그인이므로 false)
         boolean isWishlisted = false;
-//        if (userId != null) {
-//            isWishlisted = wishListRepository.existsByUserIdAndGameId(userId, gameId);
-//        }
+        if (userId != null) {
+            isWishlisted = wishListRepository.existsByUser_IdAndGame_Id(userId, gameId);
+        }
 
         // 4. 모든 데이터를 DTO 바구니에 담아서 반환
-        return GameDetailResponse.of(game,
-//                aiAnalysis,
-                isWishlisted);
+        return GameDetailResponse.of(game, aiSummary, isWishlisted);
     }
 
     /**
