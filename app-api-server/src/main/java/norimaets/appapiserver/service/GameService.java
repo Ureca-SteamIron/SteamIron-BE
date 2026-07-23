@@ -1,6 +1,5 @@
 package norimaets.appapiserver.service;
 
-import jakarta.persistence.criteria.Join;
 import lombok.RequiredArgsConstructor;
 import norimaets.appapiserver.client.AppDetailsClient;
 import norimaets.appapiserver.common.exception.CustomException;
@@ -9,6 +8,7 @@ import norimaets.appapiserver.dto.request.GameFilterRequest;
 import norimaets.appapiserver.dto.response.GameDetailResponse;
 import norimaets.appapiserver.dto.response.GameSearchResponse;
 import norimaets.appapiserver.dto.response.GameSimpleResponse;
+import norimaets.appapiserver.specification.GameSpecs;
 import norimaets.moduledomainrdb.entity.*;
 import norimaets.moduledomainrdb.repository.GameRepository;
 import norimaets.moduledomainrdb.repository.TopRankingRepository;
@@ -60,12 +60,13 @@ public class GameService {
                 .collect(Collectors.toList());
 
         // 3. 공통 필터 조립 + IN 절로 해당 ID의 게임만 조회하도록 추가합니다.
-        Specification<Game> spec = buildBaseFilterSpecification(request)
+        //    baseFilter()에 데모/가격 미수집 게임 제외 조건까지 포함되어 있어 top100에도 동일하게 적용된다.
+        Specification<Game> spec = GameSpecs.baseFilter(request)
                 .and((root, query, builder) -> root.get("id").in(rankedGameIds));
 
         // 4. 요청된 정렬 기준 확인 (기본 'popular'일 경우 DB 정렬 생략)
         boolean isDefaultSort = request.getSort() == null || request.getSort().equals("popular");
-        Sort dbSort = isDefaultSort ? Sort.unsorted() : getSort(request.getSort());
+        Sort dbSort = isDefaultSort ? Sort.unsorted() : GameSpecs.resolveSort(request.getSort());
 
         // 5. DB에서 필터링된 게임들을 가져옵니다.
         List<Game> games = gameRepository.findAll(spec, dbSort);
@@ -113,12 +114,12 @@ public class GameService {
         int safePage = (page == null || page < 0) ? 0 : page;
         int safeSize = (size == null) ? SEARCH_DEFAULT_PAGE_SIZE : Math.min(Math.max(size, 1), SEARCH_MAX_PAGE_SIZE);
 
-        // games: 부분 일치 + 공통 필터(장르/가격/할인) 결합. top100과 동일한 정렬 옵션을 지원하되
+        // games: 부분 일치 + 공통 필터(장르/가격/할인, 데모 제외 포함) 결합. top100과 동일한 정렬 옵션을 지원하되
         // id 타이브레이커를 더해서(동점 케이스 대비) 페이지네이션 결과가 완전히 결정적으로 유지되게 한다.
-        Specification<Game> spec = buildBaseFilterSpecification(filterRequest)
+        Specification<Game> spec = GameSpecs.baseFilter(filterRequest)
                 .and((root, query, builder) ->
                         builder.like(builder.lower(root.get("name")), "%" + normalizedKeyword.toLowerCase() + "%"));
-        Sort sort = getSort(filterRequest.getSort()).and(Sort.by(Sort.Direction.ASC, "id"));
+        Sort sort = GameSpecs.resolveSort(filterRequest.getSort()).and(Sort.by(Sort.Direction.ASC, "id"));
         Pageable containsPageable = PageRequest.of(safePage, safeSize, sort);
         Page<Game> exactMatches = gameRepository.findAll(spec, containsPageable);
 
@@ -157,57 +158,6 @@ public class GameService {
         return GameDetailResponse.of(game,
 //                aiAnalysis,
                 isWishlisted);
-    }
-
-    // ---------------------private---------------------
-    private Specification<Game> buildBaseFilterSpecification(GameFilterRequest req) {
-        Specification<Game> spec = Specification.unrestricted();
-
-        if (req.getGenre() != null && !"all".equalsIgnoreCase(req.getGenre())) {
-            spec = spec.and((root, query, builder) -> {
-                Join<Game, GameGenre> gameGenreJoin = root.join("gameGenres");
-                Join<GameGenre, Genre> genreJoin = gameGenreJoin.join("genre");
-                return builder.equal(genreJoin.get("name"), req.getGenre());
-            });
-        }
-
-        if ("free".equalsIgnoreCase(req.getPriceType())) {
-            spec = spec.and((root, query, builder) -> builder.isTrue(root.get("isFree")));
-        } else if ("paid".equalsIgnoreCase(req.getPriceType())) {
-            spec = spec.and((root, query, builder) -> builder.isFalse(root.get("isFree")));
-        }
-
-        if (req.getMinPrice() != null) {
-            spec = spec.and((root, query, builder) -> builder.greaterThanOrEqualTo(root.get("finalPrice"), req.getMinPrice()));
-        }
-        if (req.getMaxPrice() != null) {
-            spec = spec.and((root, query, builder) -> builder.lessThanOrEqualTo(root.get("finalPrice"), req.getMaxPrice()));
-        }
-        if (req.getMinDiscount() != null && req.getMinDiscount() > 0) {
-            spec = spec.and((root, query, builder) -> builder.greaterThanOrEqualTo(root.get("discountPercent"), req.getMinDiscount()));
-        }
-        if (req.isSale()) {
-            spec = spec.and((root, query, builder) -> builder.greaterThan(root.get("discountPercent"), 0));
-        }
-
-        return spec;
-    }
-
-    private Sort getSort(String sortType) {
-        switch (sortType != null ? sortType : "popular") {
-            case "price_asc":
-                return Sort.by(Sort.Direction.ASC, "finalPrice");
-            case "price_desc":
-                return Sort.by(Sort.Direction.DESC, "finalPrice");
-            case "discount_desc":
-                return Sort.by(Sort.Direction.DESC, "discountPercent");
-            case "name_asc":
-                return Sort.by(Sort.Direction.ASC, "name");
-            case "name_desc":
-                return Sort.by(Sort.Direction.DESC, "name");
-            default:
-                return Sort.by(Sort.Direction.ASC, "id");
-        }
     }
 
     @Transactional
