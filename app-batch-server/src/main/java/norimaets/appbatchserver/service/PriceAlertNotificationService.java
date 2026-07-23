@@ -6,8 +6,11 @@ import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import norimaets.appbatchserver.client.DiscordNotificationClient;
+import norimaets.appbatchserver.client.UserNotificationClient;
 import norimaets.appbatchserver.dto.notification.DiscordDmRequest;
 import norimaets.appbatchserver.dto.notification.DiscordDmResponse;
+import norimaets.appbatchserver.dto.notification.UserNotificationCreateRequest;
+import norimaets.appbatchserver.dto.notification.UserNotificationCreateResponse;
 import norimaets.moduledomainrdb.entity.Game;
 import norimaets.moduledomainrdb.entity.PriceAlert;
 import norimaets.moduledomainrdb.entity.User;
@@ -21,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class PriceAlertNotificationService {
 
     private final PriceAlertRepository priceAlertRepository;
+    private final UserNotificationClient userNotificationClient;
     private final DiscordNotificationClient discordNotificationClient;
 
     @Transactional
@@ -50,27 +54,12 @@ public class PriceAlertNotificationService {
             boolean discountStarted
     ) {
         User user = alert.getUser();
-
-        if (!user.isDiscordNotificationEnabled()) {
-            return;
-        }
-
-        String discordUserId = user.getDiscordId();
-
-        if (discordUserId == null || discordUserId.isBlank()) {
-            log.warn(
-                    "Discord 사용자 ID가 없어 알림을 보낼 수 없습니다: userId={}",
-                    user.getId()
-            );
-            return;
-        }
-
         LocalDateTime notifiedAt = LocalDateTime.now();
 
         if (discountStarted
                 && alert.isDiscountStartEnabled()
                 && !Objects.equals(alert.getLastDiscountStartNotifiedPrice(), currentPrice)
-                && sendAlert(alert, game, currentPrice, discordUserId, "DISCOUNT_START", null)) {
+                && sendAlert(alert, game, currentPrice, user, "DISCOUNT_START", null)) {
             alert.updateDiscountStartLastNotified(currentPrice, notifiedAt);
         }
 
@@ -79,7 +68,7 @@ public class PriceAlertNotificationService {
                 && targetPrice != null
                 && currentPrice <= targetPrice
                 && !Objects.equals(alert.getLastNotifiedPrice(), currentPrice)
-                && sendAlert(alert, game, currentPrice, discordUserId, "TARGET_PRICE", targetPrice)) {
+                && sendAlert(alert, game, currentPrice, user, "TARGET_PRICE", targetPrice)) {
             alert.updateLastNotified(currentPrice, notifiedAt);
         }
     }
@@ -88,17 +77,83 @@ public class PriceAlertNotificationService {
             PriceAlert alert,
             Game game,
             Integer currentPrice,
-            String discordUserId,
+            User user,
             String notificationType,
             Integer targetPrice
     ) {
         String eventKey = createEventKey(alert.getId(), notificationType, currentPrice);
 
+        UserNotificationCreateRequest notificationRequest =
+                new UserNotificationCreateRequest(
+                        eventKey,
+                        notificationType,
+                        alert.getId(),
+                        user.getId(),
+                        game.getId(),
+                        game.getName(),
+                        targetPrice,
+                        currentPrice,
+                        game.getDiscountPercent()
+                );
+
+        UserNotificationCreateResponse notificationResponse =
+                userNotificationClient.create(notificationRequest);
+
+        if (notificationResponse == null || !notificationResponse.isCompleted()) {
+            log.warn(
+                    "웹 알림 저장 미완료: eventKey={}, status={}",
+                    eventKey,
+                    notificationResponse != null ? notificationResponse.status() : null
+            );
+            return false;
+        }
+
+        sendDiscordIfEnabled(
+                user,
+                alert,
+                game,
+                currentPrice,
+                notificationType,
+                targetPrice,
+                eventKey
+        );
+
+        log.info(
+                "웹 가격 알림 저장 완료: eventKey={}, type={}, status={}",
+                eventKey,
+                notificationType,
+                notificationResponse.status()
+        );
+        return true;
+    }
+
+    private void sendDiscordIfEnabled(
+            User user,
+            PriceAlert alert,
+            Game game,
+            Integer currentPrice,
+            String notificationType,
+            Integer targetPrice,
+            String eventKey
+    ) {
+        if (!user.isDiscordNotificationEnabled()) {
+            return;
+        }
+
+        String discordUserId = user.getDiscordId();
+        if (discordUserId == null || discordUserId.isBlank()) {
+            log.warn(
+                    "Discord 사용자 ID가 없어 DM을 보내지 않습니다: userId={}",
+                    user.getId()
+            );
+            return;
+        }
+
         DiscordDmRequest request = new DiscordDmRequest(
                 eventKey,
                 notificationType,
                 alert.getId(),
-                alert.getUser().getId(),
+                user.getId(),
                 discordUserId,
                 game.getId(),
                 game.getName(),
@@ -106,26 +161,24 @@ public class PriceAlertNotificationService {
                 currentPrice,
                 game.getDiscountPercent()
         );
-        // 알림서버 호출
-        DiscordDmResponse response =
-                discordNotificationClient.sendDm(request);
+
+        DiscordDmResponse response = discordNotificationClient.sendDm(request);
 
         if (response != null && response.isCompleted()) {
             log.info(
-                    "가격 알림 발송 완료: eventKey={}, type={}, status={}",
+                    "Discord 가격 알림 발송 완료: eventKey={}, type={}, status={}",
                     eventKey,
                     notificationType,
                     response.status()
             );
-            return true;
+            return;
         }
 
         log.warn(
-                "가격 알림 발송 미완료: eventKey={}, status={}",
+                "Discord 가격 알림 발송 미완료: eventKey={}, status={}",
                 eventKey,
                 response != null ? response.status() : null
         );
-        return false;
     }
 
     private String createEventKey(
