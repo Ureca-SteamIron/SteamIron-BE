@@ -14,6 +14,7 @@ public class GameSimpleResponse {
     private Integer originalPrice;
     private Integer finalPrice;
     private Integer discountPercent;
+    private Boolean isFree;
 
     /**
      * Game 엔티티를 GameSimpleResponse DTO로 변환하는 정적 팩토리 메서드
@@ -26,6 +27,7 @@ public class GameSimpleResponse {
                 .originalPrice(game.getOriginalPrice())
                 .finalPrice(game.getFinalPrice())
                 .discountPercent(game.getDiscountPercent())
+                .isFree(game.getIsFree())
                 .build();
     }
 }

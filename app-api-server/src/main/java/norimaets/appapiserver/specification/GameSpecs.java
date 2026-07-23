@@ -40,17 +40,32 @@ public class GameSpecs {
             spec = spec.and((root, query, builder) -> builder.greaterThan(root.get("discountPercent"), 0));
         }
 
+        // 가격 미수집(데모 등) 게임 제외: 무료가 아닌데 가격 정보가 아예 없는 경우
+        spec = spec.and((root, query, builder) -> builder.or(
+                builder.isTrue(root.get("isFree")),
+                builder.and(
+                        builder.isNotNull(root.get("originalPrice")),
+                        builder.isNotNull(root.get("finalPrice"))
+                )
+        ));
+
         return spec;
     }
 
     public static Sort resolveSort(String sortType) {
         switch (sortType != null ? sortType : "popular") {
-            case "price_asc": return Sort.by(Sort.Direction.ASC, "finalPrice");
-            case "price_desc": return Sort.by(Sort.Direction.DESC, "finalPrice");
-            case "discount_desc": return Sort.by(Sort.Direction.DESC, "discountPercent");
-            case "name_asc": return Sort.by(Sort.Direction.ASC, "name");
-            case "name_desc": return Sort.by(Sort.Direction.DESC, "name");
-            default: return Sort.by(Sort.Direction.ASC, "id");
+            case "price_asc":
+                return Sort.by(new Sort.Order(Sort.Direction.ASC, "finalPrice", Sort.NullHandling.NULLS_FIRST));
+            case "price_desc":
+                return Sort.by(new Sort.Order(Sort.Direction.DESC, "finalPrice", Sort.NullHandling.NULLS_LAST));
+            case "discount_desc":
+                return Sort.by(Sort.Direction.DESC, "discountPercent");
+            case "name_asc":
+                return Sort.by(Sort.Direction.ASC, "name");
+            case "name_desc":
+                return Sort.by(Sort.Direction.DESC, "name");
+            default:
+                return Sort.by(Sort.Direction.ASC, "id");
         }
     }
 }
