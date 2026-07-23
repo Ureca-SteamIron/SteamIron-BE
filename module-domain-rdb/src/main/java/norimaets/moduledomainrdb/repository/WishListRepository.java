@@ -16,8 +16,12 @@ public interface WishListRepository extends JpaRepository<WishList, Long> {
     // 특정 유저의 특정 게임 찜 항목 조회 (삭제/단건 조회용)
     Optional<WishList> findByUser_IdAndGame_Id(Long userId, Long gameId);
 
-    // 특정 유저의 전체 찜 목록 조회 (N+1 방지를 위해 Game fetch join)
-    @Query("SELECT w FROM WishList w JOIN FETCH w.game WHERE w.user.id = :userId")
+    // 특정 유저의 전체 찜 목록 조회 (N+1 방지를 위해 Game, GameGenre, Genre까지 fetch join)
+    @Query("SELECT DISTINCT w FROM WishList w " +
+            "JOIN FETCH w.game g " +
+            "LEFT JOIN FETCH g.gameGenres gg " +
+            "LEFT JOIN FETCH gg.genre " +
+            "WHERE w.user.id = :userId")
     List<WishList> findAllByUserIdWithGame(@Param("userId") Long userId);
 
     // 삭제 시 벌크 삭제 (deleteByUser_IdAndGame_GameId 조합)
