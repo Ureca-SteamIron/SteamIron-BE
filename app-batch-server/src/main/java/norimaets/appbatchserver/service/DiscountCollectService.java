@@ -1,9 +1,11 @@
 package norimaets.appbatchserver.service;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -54,6 +56,7 @@ public class DiscountCollectService {
         int started = 0, changed = 0, ended = 0;
         // 이번 배치에서 실제로 가격이나 할인율이 변경된 게임만 보관, 모든 게임 알림 조회하면 DB 부하가 커짐
         List<Game> priceChangedGames = new ArrayList<>();
+        Set<Long> discountStartedGameIds = new HashSet<>();
 
         // 4. 이번 목록 순회 → 시작/변경 판정
         for (SteamDiscountItem item : current) {
@@ -73,8 +76,12 @@ public class DiscountCollectService {
 
             priceChangedGames.add(game);
 
-            if (wasDiscounted) changed++;
-            else started++;
+            if (wasDiscounted) {
+                changed++;
+            } else {
+                discountStartedGameIds.add(game.getId());
+                started++;
+            }
         }
 
         // 5. 직전엔 할인이었는데 이번 목록엔 없음 → 할인 종료 → 정가 복원 + 히스토리
@@ -95,9 +102,12 @@ public class DiscountCollectService {
         }
 
         log.info("할인 수집 완료 → 시작 {}, 변경 {}, 종료 {} (수신 {}건)", started, changed, ended, current.size());
-
+        // 배치가 판정 서비스 호출
         for (Game game : priceChangedGames) {
-            priceAlertNotificationService.process(game);
+            priceAlertNotificationService.process(
+                    game,
+                    discountStartedGameIds.contains(game.getId())
+            );
         }
     }
 

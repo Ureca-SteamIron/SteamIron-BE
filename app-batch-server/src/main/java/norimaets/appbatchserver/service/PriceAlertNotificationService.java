@@ -24,7 +24,7 @@ public class PriceAlertNotificationService {
     private final DiscordNotificationClient discordNotificationClient;
 
     @Transactional
-    public void process(Game game) {
+    public void process(Game game, boolean discountStarted) {
         Integer currentPrice = game.getFinalPrice();
 
         if (currentPrice == null) {
@@ -39,29 +39,19 @@ public class PriceAlertNotificationService {
                 priceAlertRepository.findByGame_IdAndIsActiveTrue(game.getId());
 
         for (PriceAlert alert : alerts) {
-            processAlert(alert, game, currentPrice);
+            processAlert(alert, game, currentPrice, discountStarted);
         }
     }
 
     private void processAlert(
             PriceAlert alert,
             Game game,
-            Integer currentPrice
+            Integer currentPrice,
+            boolean discountStarted
     ) {
         User user = alert.getUser();
 
         if (!user.isDiscordNotificationEnabled()) {
-            return;
-        }
-
-        Integer targetPrice = alert.getTargetPrice();
-
-        if (targetPrice == null || currentPrice > targetPrice) {
-            return;
-        }
-
-        // 중복 알람 확인
-        if (Objects.equals(alert.getLastNotifiedPrice(), currentPrice)) {
             return;
         }
 
@@ -75,12 +65,40 @@ public class PriceAlertNotificationService {
             return;
         }
 
-        String eventKey = createEventKey(alert.getId(), currentPrice);
+        LocalDateTime notifiedAt = LocalDateTime.now();
+
+        if (discountStarted
+                && alert.isDiscountStartEnabled()
+                && !Objects.equals(alert.getLastDiscountStartNotifiedPrice(), currentPrice)
+                && sendAlert(alert, game, currentPrice, discordUserId, "DISCOUNT_START", null)) {
+            alert.updateDiscountStartLastNotified(currentPrice, notifiedAt);
+        }
+
+        Integer targetPrice = alert.getTargetPrice();
+        if (alert.isTargetDiscountEnabled()
+                && targetPrice != null
+                && currentPrice <= targetPrice
+                && !Objects.equals(alert.getLastNotifiedPrice(), currentPrice)
+                && sendAlert(alert, game, currentPrice, discordUserId, "TARGET_PRICE", targetPrice)) {
+            alert.updateLastNotified(currentPrice, notifiedAt);
+        }
+    }
+
+    private boolean sendAlert(
+            PriceAlert alert,
+            Game game,
+            Integer currentPrice,
+            String discordUserId,
+            String notificationType,
+            Integer targetPrice
+    ) {
+        String eventKey = createEventKey(alert.getId(), notificationType, currentPrice);
 
         DiscordDmRequest request = new DiscordDmRequest(
                 eventKey,
+                notificationType,
                 alert.getId(),
-                user.getId(),
+                alert.getUser().getId(),
                 discordUserId,
                 game.getId(),
                 game.getName(),
@@ -88,23 +106,18 @@ public class PriceAlertNotificationService {
                 currentPrice,
                 game.getDiscountPercent()
         );
-
+        // 알림서버 호출
         DiscordDmResponse response =
                 discordNotificationClient.sendDm(request);
 
         if (response != null && response.isCompleted()) {
-            alert.updateLastNotified(
-                    currentPrice,
-                    LocalDateTime.now()
-            );
-
             log.info(
-                    "가격 알림 발송 완료: eventKey={}, status={}",
+                    "가격 알림 발송 완료: eventKey={}, type={}, status={}",
                     eventKey,
+                    notificationType,
                     response.status()
             );
-
-            return;
+            return true;
         }
 
         log.warn(
@@ -112,12 +125,14 @@ public class PriceAlertNotificationService {
                 eventKey,
                 response != null ? response.status() : null
         );
+        return false;
     }
 
     private String createEventKey(
             Long alertId,
+            String notificationType,
             Integer currentPrice
     ) {
-        return "price-alert:" + alertId + ":" + currentPrice;
+        return "price-alert:" + alertId + ":" + notificationType.toLowerCase() + ":" + currentPrice;
     }
 }

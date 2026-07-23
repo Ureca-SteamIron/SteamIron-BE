@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import norimaets.appapiserver.client.AppDetailsClient;
 import norimaets.appapiserver.common.exception.CustomException;
 import norimaets.appapiserver.common.exception.ErrorCode;
+import norimaets.appapiserver.common.sort.GameNameSort;
 import norimaets.appapiserver.dto.request.GameFilterRequest;
 import norimaets.appapiserver.dto.response.GameDetailResponse;
 import norimaets.appapiserver.dto.response.GameSearchResponse;
@@ -66,7 +67,11 @@ public class GameService {
 
         // 4. 요청된 정렬 기준 확인 (기본 'popular'일 경우 DB 정렬 생략)
         boolean isDefaultSort = request.getSort() == null || request.getSort().equals("popular");
-        Sort dbSort = isDefaultSort ? Sort.unsorted() : GameSpecs.resolveSort(request.getSort());
+        // 이름순은 "한글→영어→기타" 그룹 우선순위가 필요해 DB 콜레이션만으론 부족하다 → 메모리에서 Comparator로 정렬한다.
+        // (Top100 한정이라 최대 100개, 페이지네이션도 없어 메모리 정렬이 안전하다.)
+        Comparator<Game> nameComparator = nameGroupComparator(request.getSort());
+        boolean isNameSort = nameComparator != null;
+        Sort dbSort = (isDefaultSort || isNameSort) ? Sort.unsorted() : GameSpecs.resolveSort(request.getSort());
 
         // 5. DB에서 필터링된 게임들을 가져옵니다.
         List<Game> games = gameRepository.findAll(spec, dbSort);
@@ -74,6 +79,8 @@ public class GameService {
         // 6. 만약 기본 정렬(인기순/랭킹순)이라면, 2번에서 만든 rankedGameIds 순서에 맞춰서 메모리에서 재배치합니다!
         if (isDefaultSort) {
             games.sort(Comparator.comparingInt(game -> rankedGameIds.indexOf(game.getId())));
+        } else if (isNameSort) {
+            games.sort(nameComparator);
         }
 
         return games.stream().map(GameSimpleResponse::from).collect(Collectors.toList());
@@ -119,8 +126,21 @@ public class GameService {
         Specification<Game> spec = GameSpecs.baseFilter(filterRequest)
                 .and((root, query, builder) ->
                         builder.like(builder.lower(root.get("name")), "%" + normalizedKeyword.toLowerCase() + "%"));
-        Sort sort = GameSpecs.resolveSort(filterRequest.getSort()).and(Sort.by(Sort.Direction.ASC, "id"));
-        Pageable containsPageable = PageRequest.of(safePage, safeSize, sort);
+
+        // 이름순은 "한글→영어→기타" 그룹 우선순위가 필요해 Sort 객체로 표현할 수 없다.
+        // 페이지네이션 때문에 DB 정렬은 필수라, 이 경우만 Specification의 query.orderBy에 CASE 식을 직접 심고
+        // Pageable에는 정렬을 싣지 않는다. 나머지 정렬(가격/할인 등)은 기존 Sort 경로를 그대로 쓴다.
+        String sortType = filterRequest.getSort();
+
+        Pageable containsPageable;
+        if (GameNameSort.isNameSort(sortType)) {
+            // 이름순은 spec의 query.orderBy에 그룹 CASE를 심어 처리한다 (Pageable엔 정렬 미탑재).
+            spec = spec.and(GameNameSort.orderSpec("name_desc".equals(sortType)));
+            containsPageable = PageRequest.of(safePage, safeSize);
+        } else {
+            Sort sort = GameSpecs.resolveSort(sortType).and(Sort.by(Sort.Direction.ASC, "id"));
+            containsPageable = PageRequest.of(safePage, safeSize, sort);
+        }
         Page<Game> exactMatches = gameRepository.findAll(spec, containsPageable);
 
         List<GameSimpleResponse> similarGames = List.of();
@@ -158,6 +178,16 @@ public class GameService {
         return GameDetailResponse.of(game,
 //                aiAnalysis,
                 isWishlisted);
+    }
+
+    /**
+     * 이름순 정렬이면 그룹 우선순위(한글→영어→기타) Comparator를, 아니면 null을 반환한다.
+     * null이면 이름순이 아니라는 뜻이라 호출부에서 기존 DB 정렬 경로를 탄다.
+     */
+    private Comparator<Game> nameGroupComparator(String sortType) {
+        if ("name_asc".equals(sortType)) return GameNameSort.ascComparator();
+        if ("name_desc".equals(sortType)) return GameNameSort.descComparator();
+        return null;
     }
 
     @Transactional
