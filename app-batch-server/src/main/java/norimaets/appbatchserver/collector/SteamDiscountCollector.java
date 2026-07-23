@@ -3,7 +3,9 @@ package norimaets.appbatchserver.collector;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import norimaets.appbatchserver.dto.DiscountSnapshot;
 import norimaets.appbatchserver.dto.SteamDiscountItem;
@@ -32,12 +34,21 @@ public class SteamDiscountCollector {
     private static final int MAX_RETRIES = 4;        // 429(rate limit) 시 재시도 횟수
     private static final long RETRY_BASE_MS = 5000;  // 재시도 대기(횟수에 비례해 5s,10s,15s...)
 
+    // 완전수집 판정 임계비율: 고유 appId 수가 total_count의 이 비율 이상일 때만 complete=true.
+    // 스팀 검색은 페이지네이션이 실시간으로 흔들려 한 번 훑으면 보통 ~94%만 잡힌다(실측). start>=total만으론
+    // 6%가 빠진 채 complete=true가 되어, 안 받아온 게임을 전부 "할인 종료"로 오판 → 톱니 데이터 오염이 났다.
+    private static final double COMPLETE_THRESHOLD = 0.97;
+
+    // sort_by=Name_ASC 로 전체를 이름순 고정 정렬한 뒤 훑는다.
+    // 정렬을 안 걸면(스팀 기본 정렬) 7분간 목록 순서가 실시간으로 흔들려, 페이지 경계에서 게임이 누락/중복된다.
+    // (실측: 무정렬 수집률 94.4%·중복 1129건 → Name_ASC 99.7%·중복 0건. 한 번 훑기로 union보다 나은 결과.)
     private static final String BASE_URL =
             "https://store.steampowered.com/search/results/"
-                    + "?query&specials=1&infinite=1&cc=kr&l=koreana&count=" + PAGE_SIZE + "&start=";
+                    + "?query&specials=1&infinite=1&cc=kr&l=koreana&sort_by=Name_ASC&count=" + PAGE_SIZE + "&start=";
 
     public DiscountSnapshot fetchAllDiscounts() {
-        List<SteamDiscountItem> result = new ArrayList<>();
+        // appId 기준 dedup: 페이지네이션이 흔들려 같은 게임이 여러 페이지에 중복 등장한다(실측 ~1200건/훑기).
+        Map<Long, SteamDiscountItem> result = new LinkedHashMap<>();
         int start = 0;
         int total = Integer.MAX_VALUE;
         int page = 0;
@@ -51,7 +62,7 @@ public class SteamDiscountCollector {
 
                 List<SteamDiscountItem> parsed = parseRows(html);
                 if (parsed.isEmpty()) break; // 더 이상 항목 없으면 종료
-                result.addAll(parsed);
+                for (SteamDiscountItem item : parsed) result.putIfAbsent(item.appId(), item);
 
                 start += PAGE_SIZE;
                 page++;
@@ -64,10 +75,18 @@ public class SteamDiscountCollector {
             }
         }
 
-        // total_count 지점까지 도달했으면 완전 수집. MAX_PAGES/빈 페이지로 중간에 멈췄으면 불완전.
-        boolean complete = start >= total;
-        log.info("할인 목록 수집: 총 {}건 (total_count={}, 완전수집={})", result.size(), total, complete);
-        return new DiscountSnapshot(result, total, complete);
+        // 완전수집 판정: start가 total에 도달하기만 해선 부족하다(실시간 흔들림으로 ~94%만 잡혀도 start>=total이 됨).
+        // 고유 수집 수가 total_count의 임계비율 이상일 때만 complete=true로 본다.
+        List<SteamDiscountItem> items = new ArrayList<>(result.values());
+        boolean complete = isComplete(items.size(), total);
+        log.info("할인 목록 수집: 총 {}건(고유), total_count={}, 완전수집={}", items.size(), total, complete);
+        return new DiscountSnapshot(items, total, complete);
+    }
+
+    // 고유 수집 수가 total_count의 COMPLETE_THRESHOLD 이상이면 완전수집으로 본다. total이 0이면 판정 불가 → false.
+    private boolean isComplete(int uniqueCount, int total) {
+        if (total <= 0) return false;
+        return uniqueCount >= total * COMPLETE_THRESHOLD;
     }
 
     // 429(rate limit)가 나면 점점 길게 쉬며 재시도한다. 그래도 안 되면 예외를 던져 배치 실패로.
