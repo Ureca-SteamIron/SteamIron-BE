@@ -1,6 +1,7 @@
 package norimaets.appapiserver.client;
 
 import java.time.Duration;
+import lombok.extern.slf4j.Slf4j;
 import norimaets.appapiserver.client.dto.NotificationServerPageResponse;
 import norimaets.appapiserver.dto.response.UnreadNotificationCountResponse;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -10,6 +11,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 import org.springframework.web.server.ResponseStatusException;
 
+@Slf4j
 @Component
 public class UserNotificationClient {
 
@@ -79,6 +81,29 @@ public class UserNotificationClient {
             throw new ResponseStatusException(
                     HttpStatus.NOT_FOUND,
                     "알림을 찾을 수 없습니다."
+            );
+        }
+    }
+
+    // 회원 탈퇴 시 알림 서버의 유저 알림 데이터 삭제 요청(베스트 에포트).
+    // 알림 서버가 죽어있거나 실패해도 탈퇴 자체는 진행되어야 하므로 예외를 삼키고 로그만 남긴다.
+    // (추후 Kafka 전환 시 이 지점을 이벤트 발행으로 교체)
+    public void deleteAllByUserId(Long userId) {
+        try {
+            notificationWebClient.delete()
+                    .uri(uriBuilder -> uriBuilder
+                            .path("/internal/v1/notifications")
+                            .queryParam("userId", userId)
+                            .build())
+                    .retrieve()
+                    .toBodilessEntity()
+                    .timeout(REQUEST_TIMEOUT)
+                    .block();
+        } catch (Exception exception) {
+            log.warn(
+                    "알림 서버 유저 데이터 삭제 실패 (탈퇴는 계속 진행): userId={}, cause={}",
+                    userId,
+                    exception.getMessage()
             );
         }
     }

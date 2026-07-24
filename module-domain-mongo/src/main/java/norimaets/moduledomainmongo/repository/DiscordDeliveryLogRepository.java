@@ -11,4 +11,7 @@ public interface DiscordDeliveryLogRepository
     Optional<DiscordDeliveryLog> findByEventKey(String eventKey);
 
     List<DiscordDeliveryLog> findAllByUserIdOrderByCreatedAtDesc(Long userId);
+
+    // 회원 탈퇴 시 해당 유저의 디스코드 발송 로그 전체 삭제
+    void deleteAllByUserId(Long userId);
 }
