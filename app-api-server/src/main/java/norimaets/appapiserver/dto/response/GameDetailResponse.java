@@ -13,6 +13,7 @@ public class GameDetailResponse {
     private Integer originalPrice;
     private Integer finalPrice;
     private Integer discountPercent;
+    private Boolean isFree;
     private String description;
 
     private boolean isWishlisted;
@@ -31,6 +32,7 @@ public class GameDetailResponse {
                 .originalPrice(game.getOriginalPrice())
                 .finalPrice(game.getFinalPrice())
                 .discountPercent(game.getDiscountPercent())
+                .isFree(game.getIsFree())
 
                 .isWishlisted(isWishlisted)
 
