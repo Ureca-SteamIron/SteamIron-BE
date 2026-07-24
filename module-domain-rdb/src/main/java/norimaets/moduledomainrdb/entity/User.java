@@ -63,6 +63,12 @@ public class User {
     )
     private boolean discordNotificationEnabled = false;
 
+    // 탈퇴한 사용자의 댓글 소유권을 넘겨받는 placeholder 유저의 고정 식별값.
+    // discordId/email은 unique+not-null이라 실제 Discord 계정과 겹치지 않는 예약값을 쓴다.
+    public static final String WITHDRAWN_USER_DISCORD_ID = "__withdrawn__";
+    public static final String WITHDRAWN_USER_EMAIL = "withdrawn@steamiron.internal";
+    public static final String WITHDRAWN_USER_NICKNAME = "알 수 없는 사용자";
+
     @Builder
     public User(String discordId, String email, String nickname, String avatarUrl, Role role) {
         this.discordId = discordId;
@@ -70,6 +76,16 @@ public class User {
         this.nickname = nickname;
         this.avatarUrl = avatarUrl;
         this.role = role != null ? role : Role.USER;
+    }
+
+    // 탈퇴 회원 댓글 이전용 placeholder 유저 생성 (앱 최초 기동 시 1회 seeding)
+    public static User createWithdrawnPlaceholder() {
+        return User.builder()
+                .discordId(WITHDRAWN_USER_DISCORD_ID)
+                .email(WITHDRAWN_USER_EMAIL)
+                .nickname(WITHDRAWN_USER_NICKNAME)
+                .role(Role.USER)
+                .build();
     }
 
     // Discord 재로그인 시 닉네임/아바타 갱신 (Discord에서 바꿨을 수 있으니)

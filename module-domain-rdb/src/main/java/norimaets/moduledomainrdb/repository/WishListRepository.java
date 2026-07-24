@@ -2,6 +2,7 @@ package norimaets.moduledomainrdb.repository;
 
 import norimaets.moduledomainrdb.entity.WishList;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -26,4 +27,9 @@ public interface WishListRepository extends JpaRepository<WishList, Long> {
 
     // 삭제 시 벌크 삭제 (deleteByUser_IdAndGame_GameId 조합)
     void deleteByUser_IdAndGame_Id(Long userId, Long gameId);
+
+    // 회원 탈퇴 시 해당 유저의 찜 목록 전체 삭제
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("DELETE FROM WishList w WHERE w.user.id = :userId")
+    void deleteAllByUserId(@Param("userId") Long userId);
 }

@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Optional;
 import norimaets.moduledomainrdb.entity.PriceAlert;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -32,4 +33,9 @@ public interface PriceAlertRepository extends JpaRepository<PriceAlert, Long> {
 
     // 같은 게임에 이미 알림 설정했는지 (생성 시 중복 체크)
     boolean existsByUser_IdAndGame_Id(Long userId, Long gameId);
+
+    // 회원 탈퇴 시 해당 유저의 가격 알림 전체 삭제
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("DELETE FROM PriceAlert a WHERE a.user.id = :userId")
+    void deleteAllByUserId(@Param("userId") Long userId);
 }

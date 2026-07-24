@@ -13,6 +13,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -72,6 +73,15 @@ public class UserNotificationController {
             return ResponseEntity.notFound().build();
         }
 
+        return ResponseEntity.noContent().build();
+    }
+
+    // 회원 탈퇴 시 api-server가 호출: 해당 유저의 알림 데이터를 전부 삭제
+    @DeleteMapping
+    public ResponseEntity<Void> deleteAllByUserId(
+            @RequestParam Long userId
+    ) {
+        userNotificationService.deleteAllByUserId(userId);
         return ResponseEntity.noContent().build();
     }
 }
