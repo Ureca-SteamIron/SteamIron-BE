@@ -3,8 +3,10 @@ package norimaets.appapiserver.controller;
 import lombok.RequiredArgsConstructor;
 import norimaets.appapiserver.common.response.ApiResponse;
 import norimaets.appapiserver.dto.request.GameFilterRequest;
+import java.util.List;
 import norimaets.appapiserver.dto.response.GameDetailResponse;
 import norimaets.appapiserver.dto.response.GameSearchResponse;
+import norimaets.appapiserver.dto.response.PriceHistoryResponse;
 import norimaets.appapiserver.service.GameService;
 import org.springframework.web.bind.annotation.*;
 
@@ -35,5 +37,11 @@ public class GameController {
     @PostMapping("/{appId}/refresh")
     public ApiResponse<GameDetailResponse> refreshGame(@PathVariable Long appId, Long userId) {
         return ApiResponse.success(gameService.refreshGame(appId, userId));
+    }
+
+    // 게임 상세 가격 변동 차트용: 가격 히스토리를 시간 오름차순으로 반환 (비로그인도 조회 가능)
+    @GetMapping("/{appId}/price-history")
+    public ApiResponse<List<PriceHistoryResponse>> getPriceHistory(@PathVariable Long appId) {
+        return ApiResponse.success(gameService.getPriceHistory(appId));
     }
 }

@@ -9,9 +9,11 @@ import norimaets.appapiserver.dto.request.GameFilterRequest;
 import norimaets.appapiserver.dto.response.GameDetailResponse;
 import norimaets.appapiserver.dto.response.GameSearchResponse;
 import norimaets.appapiserver.dto.response.GameSimpleResponse;
+import norimaets.appapiserver.dto.response.PriceHistoryResponse;
 import norimaets.appapiserver.specification.GameSpecs;
 import norimaets.moduledomainrdb.entity.*;
 import norimaets.moduledomainrdb.repository.GameRepository;
+import norimaets.moduledomainrdb.repository.PriceHistoryRepository;
 import norimaets.moduledomainrdb.repository.TopRankingRepository;
 import norimaets.moduledomainrdb.repository.WishListRepository;
 import org.springframework.data.domain.Page;
@@ -38,6 +40,7 @@ public class GameService {
     private final AppDetailsClient appDetailsClient;
 
     private final WishListRepository wishListRepository;
+    private final PriceHistoryRepository priceHistoryRepository;
     private final GeminiService geminiService;
 
     @Transactional(readOnly = true)
@@ -184,6 +187,19 @@ public class GameService {
 
         // 4. 모든 데이터를 DTO 바구니에 담아서 반환
         return GameDetailResponse.of(game, aiSummary, isWishlisted);
+    }
+
+    // 게임 상세 가격 변동 차트용: 해당 게임의 가격 히스토리를 시간 오름차순으로 반환.
+    // 배치가 변동 있을 때만 기록하므로 포인트가 없으면 빈 리스트다(FE는 '기록 없음'으로 처리).
+    @Transactional(readOnly = true)
+    public List<PriceHistoryResponse> getPriceHistory(Long gameId) {
+        if (!gameRepository.existsById(gameId)) {
+            throw new CustomException(ErrorCode.GAME_NOT_FOUND);
+        }
+
+        return priceHistoryRepository.findByGame_IdOrderByRecordedAtAsc(gameId).stream()
+                .map(PriceHistoryResponse::from)
+                .collect(Collectors.toList());
     }
 
     /**
