@@ -5,6 +5,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -38,4 +39,14 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
 
     // 관리자 강제 삭제용 - soft delete 여부 무관하게 조회
     Optional<Comment> findByIdAndGame_Id(Long id, Long gameId);
+
+    // 회원 탈퇴 시: 작성한 댓글은 남기되 작성자를 '탈퇴한 사용자'(placeholder)로 이전.
+    // user_id가 nullable=false라 로우를 지우거나 null로 둘 수 없어, 예약 유저로 소유권만 넘긴다.
+    // flush/clear=true: placeholder save를 먼저 반영하고, 이후 유저 delete와 1차 캐시 정합성을 맞춘다.
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("UPDATE Comment c SET c.user.id = :placeholderUserId WHERE c.user.id = :userId")
+    void reassignAuthorToPlaceholder(
+            @Param("userId") Long userId,
+            @Param("placeholderUserId") Long placeholderUserId
+    );
 }

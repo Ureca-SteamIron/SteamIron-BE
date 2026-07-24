@@ -24,4 +24,7 @@ public interface UserNotificationRepository
     );
 
     long countByUserIdAndReadFalse(Long userId);
+
+    // 회원 탈퇴 시 해당 유저의 알림 전체 삭제
+    void deleteAllByUserId(Long userId);
 }
