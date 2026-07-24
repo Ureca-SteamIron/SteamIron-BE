@@ -6,6 +6,7 @@ import norimaets.appapiserver.common.exception.CustomException;
 import norimaets.appapiserver.common.exception.ErrorCode;
 import norimaets.appapiserver.common.sort.GameNameSort;
 import norimaets.appapiserver.dto.request.GameFilterRequest;
+import norimaets.appapiserver.dto.response.AiSummaryResponse;
 import norimaets.appapiserver.dto.response.GameDetailResponse;
 import norimaets.appapiserver.dto.response.GameSearchResponse;
 import norimaets.appapiserver.dto.response.GameSimpleResponse;
@@ -162,6 +163,8 @@ public class GameService {
         return GameSearchResponse.of(exactMatches.map(GameSimpleResponse::from), similarGames);
     }
 
+    // AI 요약(Gemini 호출)은 여기서 하지 않는다 — 수 초씩 걸려서 상세 정보 응답 전체를
+    // 붙들고 있었기 때문에 getAiSummary()로 분리했다. 프론트가 이 응답과 별도로(병렬로) 호출한다.
     @Transactional(readOnly = true)
     public GameDetailResponse getGameDetail(Long gameId, Long userId) {
 
@@ -169,21 +172,29 @@ public class GameService {
         Game game = gameRepository.findById(gameId)
                 .orElseThrow(() -> new CustomException(ErrorCode.GAME_NOT_FOUND));
 
-        // 2. AI 분석 정보 조회 (아직 분석 안 된 게임일 수도 있으니 Optional 처리)
+        // 2. 현재 유저의 찜 여부 확인 (userId가 null이면 비로그인이므로 false)
+        boolean isWishlisted = false;
+        if (userId != null) {
+            isWishlisted = wishListRepository.existsByUser_IdAndGame_Id(userId, gameId);
+        }
+
+        // 3. 모든 데이터를 DTO 바구니에 담아서 반환
+        return GameDetailResponse.of(game, isWishlisted);
+    }
+
+    // AI 요약 전용 조회. 캐싱은 하지 않으므로(팀 결정) 호출할 때마다 Gemini를 새로 호출한다.
+    @Transactional(readOnly = true)
+    public AiSummaryResponse getAiSummary(Long gameId) {
+        Game game = gameRepository.findById(gameId)
+                .orElseThrow(() -> new CustomException(ErrorCode.GAME_NOT_FOUND));
+
         String aiSummary = geminiService.generateGameSummary(
                 game.getName(),
                 game.getOriginalPrice(),
                 game.getDiscountPercent()
         );
 
-        // 3. 현재 유저의 찜 여부 확인 (userId가 null이면 비로그인이므로 false)
-        boolean isWishlisted = false;
-        if (userId != null) {
-            isWishlisted = wishListRepository.existsByUser_IdAndGame_Id(userId, gameId);
-        }
-
-        // 4. 모든 데이터를 DTO 바구니에 담아서 반환
-        return GameDetailResponse.of(game, aiSummary, isWishlisted);
+        return AiSummaryResponse.of(aiSummary);
     }
 
     /**

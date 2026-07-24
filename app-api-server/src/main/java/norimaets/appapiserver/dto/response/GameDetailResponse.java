@@ -2,7 +2,6 @@ package norimaets.appapiserver.dto.response;
 
 import lombok.Builder;
 import lombok.Getter;
-import norimaets.appapiserver.service.GeminiService;
 import norimaets.moduledomainrdb.entity.Game;
 
 @Getter
@@ -19,14 +18,12 @@ public class GameDetailResponse {
     private boolean isWishlisted;
 
     private Integer aiScore;
-    private String aiExplanation;
 
     /**
      * Entity 조각들을 모아서 하나의 완전한 DTO로 조립하는 팩토리 메서드
+     * AI 요약은 별도 엔드포인트(GET /api/games/{appId}/ai-summary)로 분리했으므로 여기서는 다루지 않는다.
      */
-    public static GameDetailResponse of(Game game,
-                                        String aiExplanation,
-                                        boolean isWishlisted) {
+    public static GameDetailResponse of(Game game, boolean isWishlisted) {
         return GameDetailResponse.builder()
                 .appId(game.getId())
                 .name(game.getName())
@@ -37,8 +34,6 @@ public class GameDetailResponse {
 
                 .isWishlisted(isWishlisted)
 
-                // 💡 주석을 해제하고 Gemini가 생성한 요약 텍스트를 담아줍니다.
-                .aiExplanation(aiExplanation != null ? aiExplanation : "AI 요약을 불러오는 중입니다.")
                 .build();
     }
 }
