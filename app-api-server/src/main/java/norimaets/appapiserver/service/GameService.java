@@ -181,8 +181,11 @@ public class GameService {
             isWishlisted = wishListRepository.existsByUser_IdAndGame_Id(userId, gameId);
         }
 
-        // 3. 모든 데이터를 DTO 바구니에 담아서 반환
-        return GameDetailResponse.of(game, isWishlisted);
+        // 3. 이 게임을 찜한 전체 유저 수 (좋아요 개수처럼 노출)
+        long wishlistCount = wishListRepository.countByGame_Id(gameId);
+
+        // 4. 모든 데이터를 DTO 바구니에 담아서 반환
+        return GameDetailResponse.of(game, isWishlisted, wishlistCount);
     }
 
     // AI 요약 전용 조회. 캐싱은 하지 않으므로(팀 결정) 호출할 때마다 Gemini를 새로 호출한다.
