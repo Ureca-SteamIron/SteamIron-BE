@@ -14,6 +14,9 @@ public interface WishListRepository extends JpaRepository<WishList, Long> {
     // 특정 유저가 특정 게임을 이미 찜했는지 확인 (추가 시 중복 방지용)
     boolean existsByUser_IdAndGame_Id(Long userId, Long gameId);
 
+    // 특정 게임을 찜한 전체 유저 수 (게임 상세에 "찜 N개"로 노출)
+    long countByGame_Id(Long gameId);
+
     // 특정 유저의 특정 게임 찜 항목 조회 (삭제/단건 조회용)
     Optional<WishList> findByUser_IdAndGame_Id(Long userId, Long gameId);
 
