@@ -43,6 +43,7 @@ public class SecurityConfig {
                         .requestMatchers("/actuator/**").permitAll()
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         .requestMatchers("/error").permitAll()                    // 에러 응답(메시지 포함)이 보안에 막혀 빈 body 되는 것 방지
+                        .requestMatchers("/api/test/**").permitAll()              // 카프카 테스트용 — 배포 전 제거 권장
                         .anyRequest().authenticated())                            // 나머지는 기본 잠금 (인증 필요)
                 .exceptionHandling(handling -> handling
                         .authenticationEntryPoint((request, response, e) ->
