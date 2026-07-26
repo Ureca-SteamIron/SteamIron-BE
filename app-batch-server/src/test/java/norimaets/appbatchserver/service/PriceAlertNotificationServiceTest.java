@@ -12,14 +12,8 @@ import static org.mockito.Mockito.when;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import norimaets.appbatchserver.client.DiscordNotificationClient;
-import norimaets.appbatchserver.client.UserNotificationClient;
-import norimaets.appbatchserver.dto.notification.DiscordDmRequest;
-import norimaets.appbatchserver.dto.notification.DiscordDmResponse;
-import norimaets.appbatchserver.dto.notification.DiscordDmStatus;
-import norimaets.appbatchserver.dto.notification.UserNotificationCreateRequest;
-import norimaets.appbatchserver.dto.notification.UserNotificationCreateResponse;
-import norimaets.appbatchserver.dto.notification.UserNotificationCreateStatus;
+import norimaets.appbatchserver.dto.notification.PriceAlertNotificationEvent;
+import norimaets.appbatchserver.producer.PriceAlertNotificationProducer;
 import norimaets.moduledomainrdb.entity.Game;
 import norimaets.moduledomainrdb.entity.PriceAlert;
 import norimaets.moduledomainrdb.entity.User;
@@ -39,10 +33,7 @@ class PriceAlertNotificationServiceTest {
     private PriceAlertRepository priceAlertRepository;
 
     @Mock
-    private UserNotificationClient userNotificationClient;
-
-    @Mock
-    private DiscordNotificationClient discordNotificationClient;
+    private PriceAlertNotificationProducer notificationProducer;
 
     @Mock
     private Game game;
@@ -59,41 +50,38 @@ class PriceAlertNotificationServiceTest {
     void setUp() {
         service = new PriceAlertNotificationService(
                 priceAlertRepository,
-                userNotificationClient,
-                discordNotificationClient
+                notificationProducer
         );
     }
 
     @Test
-    @DisplayName("할인 시작과 목표 가격 조건을 만족하면 웹 알림 두 건을 만들고 Discord로도 전송한다")
-    void createsDiscountStartAndTargetPriceNotifications() {
+    @DisplayName("할인 시작과 목표 가격 조건을 만족하면 이벤트 두 건을 발행하고, Discord ID를 포함시킨다")
+    void publishesDiscountStartAndTargetPriceEvents() {
         givenSendableAlert();
         when(alert.isDiscountStartEnabled()).thenReturn(true);
         when(user.isDiscordNotificationEnabled()).thenReturn(true);
         when(user.getDiscordId()).thenReturn("123456789012345678");
-        when(userNotificationClient.create(any(UserNotificationCreateRequest.class)))
-                .thenReturn(completed(UserNotificationCreateStatus.CREATED));
-        when(discordNotificationClient.sendDm(any(DiscordDmRequest.class)))
-                .thenReturn(new DiscordDmResponse(DiscordDmStatus.SENT));
+        when(notificationProducer.publish(any(PriceAlertNotificationEvent.class))).thenReturn(true);
 
         service.process(game, true);
 
-        ArgumentCaptor<UserNotificationCreateRequest> requestCaptor =
-                ArgumentCaptor.forClass(UserNotificationCreateRequest.class);
-        verify(userNotificationClient, times(2)).create(requestCaptor.capture());
+        ArgumentCaptor<PriceAlertNotificationEvent> captor =
+                ArgumentCaptor.forClass(PriceAlertNotificationEvent.class);
+        verify(notificationProducer, times(2)).publish(captor.capture());
 
-        assertThat(requestCaptor.getAllValues())
-                .extracting(UserNotificationCreateRequest::notificationType)
+        assertThat(captor.getAllValues())
+                .extracting(PriceAlertNotificationEvent::notificationType)
                 .containsExactly("DISCOUNT_START", "TARGET_PRICE");
-        assertThat(requestCaptor.getAllValues())
-                .extracting(UserNotificationCreateRequest::eventKey)
+        assertThat(captor.getAllValues())
+                .extracting(PriceAlertNotificationEvent::eventKey)
                 .containsExactly(
                         "price-alert:123:discount_start:19000",
                         "price-alert:123:target_price:19000"
                 );
+        assertThat(captor.getAllValues())
+                .extracting(PriceAlertNotificationEvent::discordUserId)
+                .containsExactly("123456789012345678", "123456789012345678");
 
-        verify(discordNotificationClient, times(2))
-                .sendDm(any(DiscordDmRequest.class));
         verify(alert).updateDiscountStartLastNotified(
                 eq(19_000),
                 any(LocalDateTime.class)
@@ -105,32 +93,18 @@ class PriceAlertNotificationServiceTest {
     }
 
     @Test
-    @DisplayName("Discord가 꺼져 있어도 웹 알림은 생성하고 완료 가격을 갱신한다")
-    void discordOffStillCreatesWebNotification() {
+    @DisplayName("Discord가 꺼져 있으면 discordUserId 없이 이벤트를 발행하고 완료 가격을 갱신한다")
+    void discordOffPublishesEventWithoutDiscordUserId() {
         givenSendableAlert();
         when(user.isDiscordNotificationEnabled()).thenReturn(false);
-        when(userNotificationClient.create(any(UserNotificationCreateRequest.class)))
-                .thenReturn(completed(UserNotificationCreateStatus.CREATED));
+        when(notificationProducer.publish(any(PriceAlertNotificationEvent.class))).thenReturn(true);
 
         service.process(game, false);
 
-        verify(userNotificationClient).create(any(UserNotificationCreateRequest.class));
-        verifyNoInteractions(discordNotificationClient);
-        verify(alert).updateLastNotified(
-                eq(19_000),
-                any(LocalDateTime.class)
-        );
-    }
-
-    @Test
-    @DisplayName("이미 저장된 웹 알림도 완료로 보고 가격을 갱신한다")
-    void alreadyExistingWebNotificationUpdatesLastNotified() {
-        givenSendableAlert();
-        when(user.isDiscordNotificationEnabled()).thenReturn(false);
-        when(userNotificationClient.create(any(UserNotificationCreateRequest.class)))
-                .thenReturn(completed(UserNotificationCreateStatus.ALREADY_EXISTS));
-
-        service.process(game, false);
+        ArgumentCaptor<PriceAlertNotificationEvent> captor =
+                ArgumentCaptor.forClass(PriceAlertNotificationEvent.class);
+        verify(notificationProducer).publish(captor.capture());
+        assertThat(captor.getValue().discordUserId()).isNull();
 
         verify(alert).updateLastNotified(
                 eq(19_000),
@@ -139,15 +113,14 @@ class PriceAlertNotificationServiceTest {
     }
 
     @Test
-    @DisplayName("웹 알림 저장에 실패하면 완료 가격을 갱신하지 않고 Discord도 호출하지 않는다")
-    void failedWebNotificationDoesNotUpdateLastNotified() {
+    @DisplayName("이벤트 발행에 실패하면 완료 가격을 갱신하지 않는다 (재시도 가능하게)")
+    void failedPublishDoesNotUpdateLastNotified() {
         givenSendableAlert();
-        when(userNotificationClient.create(any(UserNotificationCreateRequest.class)))
-                .thenReturn(completed(UserNotificationCreateStatus.FAILED));
+        when(user.isDiscordNotificationEnabled()).thenReturn(false);
+        when(notificationProducer.publish(any(PriceAlertNotificationEvent.class))).thenReturn(false);
 
         service.process(game, false);
 
-        verifyNoInteractions(discordNotificationClient);
         verify(alert, never()).updateLastNotified(
                 anyInt(),
                 any(LocalDateTime.class)
@@ -155,28 +128,8 @@ class PriceAlertNotificationServiceTest {
     }
 
     @Test
-    @DisplayName("Discord 전송이 실패해도 웹 알림이 저장됐으면 완료 가격을 갱신한다")
-    void failedDiscordStillUpdatesLastNotified() {
-        givenSendableAlert();
-        when(user.isDiscordNotificationEnabled()).thenReturn(true);
-        when(user.getDiscordId()).thenReturn("123456789012345678");
-        when(userNotificationClient.create(any(UserNotificationCreateRequest.class)))
-                .thenReturn(completed(UserNotificationCreateStatus.CREATED));
-        when(discordNotificationClient.sendDm(any(DiscordDmRequest.class)))
-                .thenReturn(new DiscordDmResponse(DiscordDmStatus.FAILED));
-
-        service.process(game, false);
-
-        verify(discordNotificationClient).sendDm(any(DiscordDmRequest.class));
-        verify(alert).updateLastNotified(
-                eq(19_000),
-                any(LocalDateTime.class)
-        );
-    }
-
-    @Test
-    @DisplayName("현재 가격이 목표 가격보다 높으면 어떤 알림도 생성하지 않는다")
-    void priceAboveTargetDoesNotCreateNotification() {
+    @DisplayName("현재 가격이 목표 가격보다 높으면 어떤 이벤트도 발행하지 않는다")
+    void priceAboveTargetDoesNotPublish() {
         when(game.getId()).thenReturn(730L);
         when(game.getFinalPrice()).thenReturn(25_000);
         when(priceAlertRepository.findByGame_IdAndIsActiveTrue(730L))
@@ -187,7 +140,7 @@ class PriceAlertNotificationServiceTest {
 
         service.process(game, false);
 
-        verifyNoInteractions(userNotificationClient, discordNotificationClient);
+        verifyNoInteractions(notificationProducer);
         verify(alert, never()).updateLastNotified(
                 anyInt(),
                 any(LocalDateTime.class)
@@ -195,8 +148,8 @@ class PriceAlertNotificationServiceTest {
     }
 
     @Test
-    @DisplayName("현재 가격으로 이미 알림을 완료했다면 다시 생성하지 않는다")
-    void sameLastNotifiedPriceDoesNotCreateNotification() {
+    @DisplayName("현재 가격으로 이미 알림을 완료했다면 다시 발행하지 않는다")
+    void sameLastNotifiedPriceDoesNotPublish() {
         when(game.getId()).thenReturn(730L);
         when(game.getFinalPrice()).thenReturn(19_000);
         when(priceAlertRepository.findByGame_IdAndIsActiveTrue(730L))
@@ -208,7 +161,7 @@ class PriceAlertNotificationServiceTest {
 
         service.process(game, false);
 
-        verifyNoInteractions(userNotificationClient, discordNotificationClient);
+        verifyNoInteractions(notificationProducer);
         verify(alert, never()).updateLastNotified(
                 anyInt(),
                 any(LocalDateTime.class)
@@ -230,11 +183,5 @@ class PriceAlertNotificationServiceTest {
         when(alert.getTargetPrice()).thenReturn(20_000);
 
         when(user.getId()).thenReturn(10L);
-    }
-
-    private UserNotificationCreateResponse completed(
-            UserNotificationCreateStatus status
-    ) {
-        return new UserNotificationCreateResponse(status);
     }
 }
