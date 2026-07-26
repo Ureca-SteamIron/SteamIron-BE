@@ -31,7 +31,9 @@ public class GeminiService {
     public String generateGameSummary(String gameName, Integer originalPrice, Integer discountPercent) {
         String prompt = String.format(
                 "'%s'라는 스팀 게임에 대해 설명해줘. 원가는 %d원이고 현재 %d%% 할인 중이야. " +
-                        "이 게임의 핵심 재미 요소와 현재 할인 가격에 대한 평가를 포함해서 딱 3줄로 재미있게 요약해줘.",
+                        "이 게임의 핵심 재미 요소와 현재 할인 가격에 대한 평가를 포함해서 3줄로 재미있게 요약해줘. " +
+                        "단, '세 줄 요약해 드릴게요', '알겠습니다' 같은 서두 멘트나 인사말, 부연 설명 없이 요약 본문만 바로 출력해줘. " +
+                        "번호나 마크다운 기호(*, - 등) 없이 자연스러운 문장으로 줄바꿈만 해서 작성해줘.",
                 gameName, originalPrice, discountPercent
         );
 
