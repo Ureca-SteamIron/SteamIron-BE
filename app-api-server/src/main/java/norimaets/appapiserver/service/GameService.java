@@ -188,11 +188,22 @@ public class GameService {
         return GameDetailResponse.of(game, isWishlisted, wishlistCount);
     }
 
+    // 시연용 게임(호러 게임)은 Gemini를 호출하지 않고 미리 준비된 요약을 바로 내려준다.
+    private static final Long DEMO_GAME_ID = 3241660L;
+    private static final String DEMO_AI_SUMMARY = """
+            폐가에 들어가 빚쟁이들의 물건을 압류하는 긴장감 넘치는 공포와 전략적 파밍의 재미를 동시에 느낄 수 있는 게임입니다.
+            최대 4인까지 협동하여 귀신을 따돌리고 물건을 챙겨 탈출하는 과정에서 친구들과 겪는 웃픈 상황들이 큰 묘미입니다.
+            현재 35% 할인된 6,950원은 친구들과 함께 가볍게 즐기며 공포와 웃음을 사기에 충분히 합리적인 가격입니다.""";
+
     // AI 요약 전용 조회. 캐싱은 하지 않으므로(팀 결정) 호출할 때마다 Gemini를 새로 호출한다.
     @Transactional(readOnly = true)
     public AiSummaryResponse getAiSummary(Long gameId) {
         Game game = gameRepository.findById(gameId)
                 .orElseThrow(() -> new CustomException(ErrorCode.GAME_NOT_FOUND));
+
+        if (gameId.equals(DEMO_GAME_ID)) {
+            return AiSummaryResponse.of(DEMO_AI_SUMMARY);
+        }
 
         String aiSummary = geminiService.generateGameSummary(
                 game.getName(),
