@@ -31,5 +31,17 @@ services:
     depends_on:
       - kafka
 
+  # 강의장 PC(Mongo 실제 위치)가 꺼져있을 때 로컬 개발용으로 대체.
+  # 인증 없이 단순하게 — 외부 노출 없는 로컬 전용이라 보안 설정은 생략.
+  # Postgres는 별도 컨테이너(steamiron-pg, 덤프 복원 완료)를 이미 로컬에 갖고 있어 여기 포함하지 않음.
+  mongo:
+    image: mongo:7.0
+    container_name: steamiron-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+
 volumes:
   kafka-data:
+  mongo-data:
