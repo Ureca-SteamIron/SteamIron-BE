@@ -1,4 +1,4 @@
-package norimaets.appbatchserver.dto.notification;
+package norimaets.appnotificationserver.dto;
 
 /**
  * 배치 → 알림 서버로 발행되는 통합 알림 이벤트.
