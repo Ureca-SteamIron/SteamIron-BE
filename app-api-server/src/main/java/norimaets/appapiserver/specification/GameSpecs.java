@@ -53,13 +53,20 @@ public class GameSpecs {
     }
 
     public static Sort resolveSort(String sortType) {
+        // finalPrice/discountPercent는 동점(같은 값)인 행이 아주 많아서, 이 컬럼만으로 정렬하면
+        // 페이지(LIMIT/OFFSET)마다 동점 그룹 내부 순서가 달라질 수 있다. 그러면 어떤 게임은
+        // 두 페이지에 걸쳐 중복으로 나오고 어떤 게임은 누락된다. id를 2차 정렬 키로 붙여
+        // 정렬 결과를 항상 결정적으로 만든다(이름순 정렬과 동일한 처리).
+        Sort idTieBreaker = Sort.by(Sort.Direction.ASC, "id");
         switch (sortType != null ? sortType : "popular") {
             case "price_asc":
-                return Sort.by(new Sort.Order(Sort.Direction.ASC, "finalPrice", Sort.NullHandling.NULLS_FIRST));
+                return Sort.by(new Sort.Order(Sort.Direction.ASC, "finalPrice", Sort.NullHandling.NULLS_FIRST))
+                        .and(idTieBreaker);
             case "price_desc":
-                return Sort.by(new Sort.Order(Sort.Direction.DESC, "finalPrice", Sort.NullHandling.NULLS_LAST));
+                return Sort.by(new Sort.Order(Sort.Direction.DESC, "finalPrice", Sort.NullHandling.NULLS_LAST))
+                        .and(idTieBreaker);
             case "discount_desc":
-                return Sort.by(Sort.Direction.DESC, "discountPercent");
+                return Sort.by(Sort.Direction.DESC, "discountPercent").and(idTieBreaker);
             case "name_asc":
                 return Sort.by(Sort.Direction.ASC, "name");
             case "name_desc":
